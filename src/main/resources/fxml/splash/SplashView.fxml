@@ -14,7 +14,7 @@
 
     <!-- 배경 -->
     <children>
-        <ImageView fitWidth="750" fitHeight="600" preserveRatio="false">
+        <ImageView fitWidth="850" fitHeight="700" preserveRatio="false">
             <image><Image url="/images/bg_start.png"/></image>
         </ImageView>
 
