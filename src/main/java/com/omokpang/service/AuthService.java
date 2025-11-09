@@ -1,9 +1,27 @@
-/** AuthService
- * 역할: 회원가입/로그인 규칙 및 DB 연동.
- * 핵심기능: 입력 유효성·중복검사 / 비밀번호 해시 검증 / 로그인 성공 시 세션 처리.
- */
-
 package com.omokpang.service;
 
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * AuthService
+ * 역할: 로그인 및 회원가입 로직 (임시 메모리 기반)
+ * 추후 DB 연동 시 이 로직을 교체하면 됨.
+ */
 public class AuthService {
+
+    // 임시로 사용자 정보를 저장하는 Map (DB 대신)
+    private final Map<String, String> users = new HashMap<>();
+
+    // 회원가입
+    public boolean signup(String id, String pw) {
+        if (users.containsKey(id)) return false; // 이미 존재
+        users.put(id, pw);
+        return true;
+    }
+
+    // 로그인
+    public boolean login(String id, String pw) {
+        return users.containsKey(id) && users.get(id).equals(pw);
+    }
 }

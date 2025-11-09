@@ -1,6 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  역할: 로그인/회원가입 화면 (탭 기반)
-  핵심기능: 입력 유효성 바인딩 / 로그인·회원가입 호출 / 성공 시 전환
--->
 
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.geometry.Insets?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.auth.AuthController"
+            prefWidth="900" prefHeight="600">
+
+    <!-- 배경 이미지 -->
+    <ImageView fitWidth="900" fitHeight="600"
+               preserveRatio="false" pickOnBounds="true"
+               image="@/images/login/login_backgroud.png" />
+
+    <!-- 중앙 오버레이 -->
+    <StackPane layoutX="200" layoutY="100" prefWidth="500" prefHeight="380"
+               AnchorPane.leftAnchor="200" AnchorPane.rightAnchor="200" AnchorPane.topAnchor="100">
+
+        <!-- 반투명 검정 박스 -->
+        <Rectangle width="500" height="380" arcWidth="12" arcHeight="12"
+                   style="-fx-fill: rgba(0,0,0,0.6);" />
+
+        <!-- 로그인 & 회원가입 탭 -->
+        <TabPane fx:id="authTabs" prefWidth="420" prefHeight="340" tabClosingPolicy="UNAVAILABLE">
+
+            <!-- 로그인 탭 -->
+            <Tab text="로그인">
+                <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20;">
+                    <Label text="로그인" style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
+                    <Label text="아직 회원가입을 하지 않으셨다면, 회원가입하기를 클릭하세요."
+                           style="-fx-text-fill: #ccc; -fx-font-size: 12;" />
+                    <TextField fx:id="loginIdField" promptText="닉네임 입력"
+                               style="-fx-background-radius: 8; -fx-font-size: 14;" />
+                    <PasswordField fx:id="loginPwField" promptText="비밀번호 입력"
+                                   style="-fx-background-radius: 8; -fx-font-size: 14;" />
+                    <Button text="게임 시작하기"
+                            onAction="#handleLogin"
+                            style="-fx-background-color: linear-gradient(to bottom, #3a3a3a, #000); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;" />
+                    <Label fx:id="loginMsgLabel" textFill="red" style="-fx-font-size: 13;" />
+                    <Hyperlink text="회원가입하기" onAction="#handleGotoSignup" style="-fx-text-fill: #87CEFA;" />
+                </VBox>
+            </Tab>
+
+            <!-- 회원가입 탭 -->
+            <Tab text="회원가입">
+                <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20;">
+                    <Label text="회원가입" style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
+                    <Label text="이미 회원가입을 하셨다면, 로그인하기를 클릭하세요."
+                           style="-fx-text-fill: #ccc; -fx-font-size: 12;" />
+                    <TextField fx:id="signupIdField" promptText="닉네임 입력 (10자 이내)"
+                               style="-fx-background-radius: 8; -fx-font-size: 14;" />
+                    <PasswordField fx:id="signupPwField" promptText="비밀번호 입력 (숫자 4자리)"
+                                   style="-fx-background-radius: 8; -fx-font-size: 14;" />
+                    <PasswordField fx:id="signupPwConfirmField" promptText="비밀번호 확인"
+                                   style="-fx-background-radius: 8; -fx-font-size: 14;" />
+                    <Button text="입력 완료"
+                            fx:id="signupButton" disable="true"
+                            onAction="#handleSignup"
+                            style="-fx-background-color: linear-gradient(to bottom, #3a3a3a, #000); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;" />
+                    <Label fx:id="signupMsgLabel" textFill="red" style="-fx-font-size: 13;" />
+                    <Hyperlink text="로그인하기" onAction="#handleGotoLogin" style="-fx-text-fill: #87CEFA;" />
+                </VBox>
+            </Tab>
+
+        </TabPane>
+    </StackPane>
+</AnchorPane>
