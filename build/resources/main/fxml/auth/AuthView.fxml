@@ -3,8 +3,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.shape.Rectangle?>
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -12,104 +11,114 @@
             prefWidth="900" prefHeight="600">
 
     <!-- 배경 이미지 -->
-    <ImageView fitWidth="900" fitHeight="600" preserveRatio="false" pickOnBounds="true">
+    <ImageView fitWidth="900" fitHeight="600" preserveRatio="false"
+               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0">
         <image>
             <Image url="@/images/bg_darkmode.png" />
         </image>
     </ImageView>
 
-    <!-- 중앙 오버레이 -->
-    <StackPane layoutX="200" layoutY="100" prefWidth="500" prefHeight="380"
-               AnchorPane.leftAnchor="200" AnchorPane.rightAnchor="200" AnchorPane.topAnchor="100">
+    <!-- 중앙 로그인 박스 -->
+    <StackPane prefWidth="500" prefHeight="380"
+               AnchorPane.leftAnchor="200" AnchorPane.topAnchor="100">
 
-        <!-- 로그인 박스 배경 이미지 -->
-        <ImageView fitWidth="265" fitHeight="201" preserveRatio="false" pickOnBounds="true" mouseTransparent="true">
+        <!-- 박스 배경 이미지 -->
+        <ImageView fitWidth="265" fitHeight="201" preserveRatio="false" mouseTransparent="true">
             <image>
                 <Image url="@/images/login/loginBf_Box.png" />
             </image>
         </ImageView>
 
-        <!-- 로그인 & 회원가입 탭 -->
-        <TabPane fx:id="authTabs" prefWidth="420" prefHeight="340" tabClosingPolicy="UNAVAILABLE">
+        <!-- 탭 -->
+        <TabPane fx:id="authTabs" prefWidth="420" prefHeight="340"
+                 tabClosingPolicy="UNAVAILABLE">
 
             <!-- 로그인 탭 -->
             <Tab text="로그인">
                 <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20;">
-                    <Label text="로그인" style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
-                    <Label text="아직 회원가입을 하지 않으셨다면, 회원가입하기를 클릭하세요."
+
+                    <Label text="로그인"
+                           style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
+
+                    <Label text="아직 회원가입을 하지 않으셨다면, 회원가입 탭으로 이동하세요."
                            style="-fx-text-fill: #ccc; -fx-font-size: 12;" />
-                    <!-- 닉네임 입력 -->
-                    <StackPane alignment="CENTER">
-                        <!-- 배경 이미지 -->
-                        <ImageView fitWidth="280" fitHeight="50" preserveRatio="false" mouseTransparent="true">
-                            <image>
-                                <Image url="@/images/login/loginBf_nickname.png" />
-                            </image>
-                        </ImageView>
 
-                        <!-- 실제 입력창 -->
-                        <TextField fx:id="loginIdField"
-                                   promptText=""
-                                   prefWidth="260" prefHeight="40"
-                                   style="-fx-background-color: transparent;
-                      -fx-text-fill: white;
-                      -fx-font-size: 15px;
-                      -fx-padding: 0 0 0 100;      /* 왼쪽 안쪽 여백 */
-                      -fx-alignment: CENTER_LEFT;  /* 글자 왼쪽 정렬 */
-                      -fx-prompt-text-fill: #ccc;" />
-                    </StackPane>
+                    <TextField fx:id="loginIdField"
+                               promptText="닉네임 입력"
+                               style="-fx-background-radius: 8;
+                                      -fx-font-size: 14;
+                                      -fx-padding: 10;" />
 
-                    <!-- 비밀번호 입력 -->
-                    <StackPane alignment="CENTER">
-                        <ImageView fitWidth="280" fitHeight="50" preserveRatio="false" mouseTransparent="true">
-                            <image>
-                                <Image url="@/images/login/loginBf_password.png" />
-                            </image>
-                        </ImageView>
+                    <PasswordField fx:id="loginPwField"
+                                   promptText="비밀번호 입력"
+                                   style="-fx-background-radius: 8;
+                                          -fx-font-size: 14;
+                                          -fx-padding: 10;" />
 
-                        <PasswordField fx:id="loginPwField"
-                                       promptText=""
-                                       style="-fx-background-color: transparent;
-                          -fx-text-fill: white;
-                          -fx-font-size: 15px;
-                          -fx-alignment: CENTER_LEFT;"
-                                       prefWidth="260" prefHeight="40" />
-                    </StackPane>
+                    <Button onAction="#handleLogin"
+                            style="-fx-background-color: transparent; -fx-cursor: hand;">
+                        <graphic>
+                            <ImageView fitWidth="200" fitHeight="60" preserveRatio="true">
+                                <image>
+                                    <Image url="@/images/login/loginBf_startBt.png" />
+                                </image>
+                            </ImageView>
+                        </graphic>
+                    </Button>
 
-                    <Button onAction="#handleLogin" style="-fx-background-color: transparent; -fx-cursor: hand;">
-                    <graphic>
-                        <ImageView fitWidth="200" fitHeight="60" preserveRatio="true">
-                            <image>
-                                <Image url="@/images/login/loginBf_startBt.png" />
-                            </image>
-                        </ImageView>
-                    </graphic>
-                </Button>
-                    <Label fx:id="loginMsgLabel" textFill="red" style="-fx-font-size: 13;" />
-                    <Hyperlink text="회원가입하기"
-                               onAction="#handleGotoSignup"
-                               style="-fx-text-fill: #87CEFA; -fx-underline: true; -fx-font-weight: bold;" />
+
+                    <Label fx:id="loginMsgLabel"
+                           textFill="red"
+                           style="-fx-font-size: 13;" />
                 </VBox>
             </Tab>
 
             <!-- 회원가입 탭 -->
             <Tab text="회원가입">
                 <VBox alignment="CENTER" spacing="15" style="-fx-padding: 20;">
-                    <Label text="회원가입" style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
-                    <Label text="이미 회원가입을 하셨다면, 로그인하기를 클릭하세요."
+
+                    <Label text="회원가입"
+                           style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: bold;" />
+
+                    <Label text="이미 회원가입을 하셨다면 로그인 탭으로 이동하세요."
                            style="-fx-text-fill: #ccc; -fx-font-size: 12;" />
-                    <TextField fx:id="signupIdField" promptText="닉네임 입력 (10자 이내)"
-                               style="-fx-background-radius: 8; -fx-font-size: 14;" />
-                    <PasswordField fx:id="signupPwField" promptText="비밀번호 입력 (숫자 4자리)"
-                                   style="-fx-background-radius: 8; -fx-font-size: 14;" />
-                    <PasswordField fx:id="signupPwConfirmField" promptText="비밀번호 확인"
-                                   style="-fx-background-radius: 8; -fx-font-size: 14;" />
-                    <Button text="입력 완료"
-                            fx:id="signupButton" disable="true"
+
+                    <TextField fx:id="signupIdField"
+                               promptText="닉네임 입력 (10자 이내)"
+                               style="-fx-background-radius: 8;
+                                      -fx-font-size: 14;
+                                      -fx-padding: 10;" />
+
+                    <PasswordField fx:id="signupPwField"
+                                   promptText="비밀번호 입력 (숫자 4자리)"
+                                   style="-fx-background-radius: 8;
+                                          -fx-font-size: 14;
+                                          -fx-padding: 10;" />
+
+                    <PasswordField fx:id="signupPwConfirmField"
+                                   promptText="비밀번호 확인"
+                                   style="-fx-background-radius: 8;
+                                          -fx-font-size: 14;
+                                          -fx-padding: 10;" />
+
+                    <Button fx:id="signupButton" disable="true"
                             onAction="#handleSignup"
-                            style="-fx-background-color: linear-gradient(to bottom, #3a3a3a, #000); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;" />
-                    <Label fx:id="signupMsgLabel" textFill="red" style="-fx-font-size: 13;" />
-                    <Hyperlink text="로그인하기" onAction="#handleGotoLogin" style="-fx-text-fill: #87CEFA;" />
+                            style="-fx-background-color: transparent; -fx-cursor: hand;">
+                        <graphic>
+                            <ImageView fitWidth="200" fitHeight="60" preserveRatio="true">
+                                <image>
+                                    <Image url="/images/login/loginAf_finishBt.png" />
+                                </image>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+
+
+                    <Label fx:id="signupMsgLabel"
+                           textFill="red"
+                           style="-fx-font-size: 13;" />
+
+                    <!-- 🔥 여기 있던 Hyperlink "로그인하기" 완전히 제거됨 -->
                 </VBox>
             </Tab>
 

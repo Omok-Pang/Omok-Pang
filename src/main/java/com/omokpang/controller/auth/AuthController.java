@@ -154,7 +154,7 @@ public class AuthController {
 
             // ✅ 로그인한 닉네임 전달
             com.omokpang.controller.main.MainController controller = loader.getController();
-            controller.setUsername(loginIdField.getText());
+            //controller.setUsername(loginIdField.getText());
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
             stage.setScene(new Scene(mainRoot));
