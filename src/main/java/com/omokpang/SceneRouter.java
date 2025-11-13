@@ -25,7 +25,7 @@ public final class SceneRouter {
         try {
             FXMLLoader loader = new FXMLLoader(SceneRouter.class.getResource(fxmlPath));
             Parent root = loader.load();
-            Scene scene = new Scene(root, App.APP_WIDTH, App.APP_HEIGHT);
+            Scene scene = new Scene(root);
             stage.setScene(scene);
             stage.show();
         } catch (Exception e) {

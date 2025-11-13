@@ -22,11 +22,10 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         // 1) 최초 화면: SplashView.fxml 로드
-        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/splash/SplashView.fxml"));
-        Parent root = loader.load();
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/splash/SplashView.fxml"));
 
         // 2) Scene 생성 및 Stage 세팅
-        Scene scene = new Scene(root, APP_WIDTH, APP_HEIGHT);
+        Scene scene = new Scene(root);
         // 필요하면 스타일시트: scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
 
         primaryStage.setTitle("OmokPang");
