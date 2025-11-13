@@ -1,5 +1,178 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  역할: 본 게임 화면(보드/타이머/카드/채팅)
-  핵심기능: 보드 클릭→수 요청 / 서버 이벤트 반영 / 카드 사용 플로우 / 프리셋 채팅 / 타이머
+  역할: 본 게임 화면(보드/타이머/유저 아바타)
 -->
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.game.GameBoardController"
+            fx:id="rootPane"
+            prefWidth="750" prefHeight="600"
+            stylesheets="/css/game-board.css"
+            style="
+                -fx-background-image: url('/images/bg_darkmode.png');
+                -fx-background-size: cover;
+                -fx-background-position: center center;
+                -fx-background-repeat: no-repeat;
+            ">
+
+    <!-- 가운데: 아바타 + 보드 + (왼쪽 말풍선 선택 패널) -->
+    <center>
+        <StackPane fx:id="centerStack">
+
+            <!-- 가운데 세로 레이아웃: 위 아바타 / 보드 / 아래 유저영역 -->
+            <VBox alignment="CENTER" spacing="16" fillWidth="false">
+
+                <!-- 위쪽 유저 (아바타만 감싸는 컨테이너) -->
+                <StackPane fx:id="topPlayerContainer" alignment="CENTER">
+                    <ImageView fx:id="topPlayerImage"
+                               fitWidth="96"
+                               fitHeight="96"
+                               preserveRatio="true">
+                        <image>
+                            <Image url="/images/user/user1.png"/>
+                        </image>
+                    </ImageView>
+                </StackPane>
+
+                <!-- 보드(정사각형) : 항상 중앙 -->
+                <StackPane alignment="CENTER">
+                    <Pane fx:id="boardRoot"
+                          prefWidth="360" prefHeight="360"
+                          maxWidth="360" maxHeight="360"
+                          minWidth="360" minHeight="360"
+                          style="-fx-background-color: transparent;"/>
+                </StackPane>
+
+                <!-- 아래쪽 유저 영역: 중앙 아바타 + 오른쪽 말풍선 -->
+                <StackPane alignment="CENTER">
+                    <!-- 아바타 컨테이너 (항상 정중앙) -->
+                    <StackPane fx:id="bottomPlayerContainer"
+                               alignment="CENTER">
+                        <ImageView fx:id="bottomPlayerImage"
+                                   fitWidth="96"
+                                   fitHeight="96"
+                                   preserveRatio="true">
+                            <image>
+                                <Image url="/images/user/user2.png"/>
+                            </image>
+                        </ImageView>
+                    </StackPane>
+
+                    <!-- 내가 보낸 말풍선 (ui_message.png) : 중앙 기준 오른쪽 -->
+                    <StackPane fx:id="bottomMessageBubble"
+                               visible="false"
+                               alignment="CENTER"
+                               translateX="140"
+                               translateY="-8">
+                        <ImageView fitWidth="150" preserveRatio="true">
+                            <image>
+                                <Image url="/images/message/ui_message.png"/>
+                            </image>
+                        </ImageView>
+                        <Label fx:id="bottomMessageLabel"
+                               wrapText="true"
+                               maxWidth="120"
+                               alignment="CENTER"
+                               textAlignment="CENTER"
+                               translateX="2"
+                               translateY="-3"
+                               style="
+                                   -fx-text-fill: white;
+                                   -fx-font-size: 18;
+                                   -fx-font-weight: 800;
+                               "/>
+                    </StackPane>
+                </StackPane>
+            </VBox>
+
+            <!-- ⬅ 왼쪽: 말풍선 선택 패널 -->
+            <StackPane fx:id="messageSelectPane"
+                       visible="false"
+                       pickOnBounds="false"
+                       alignment="TOP_LEFT"
+                       StackPane.alignment="TOP_LEFT">
+                <StackPane.margin>
+                    <Insets left="10" top="40"/>
+                </StackPane.margin>
+
+                <!-- 패널 컨테이너 (폭 고정) -->
+                <VBox alignment="TOP_CENTER"
+                      prefWidth="220" maxWidth="220" spacing="0">
+
+                    <!-- 스크롤 영역 -->
+                    <ScrollPane fx:id="messageScroll"
+                                styleClass="cheer-scroll"
+                                prefWidth="220" maxWidth="220"
+                                prefViewportHeight="720"
+                                fitToWidth="true"
+                                hbarPolicy="NEVER"
+                                vbarPolicy="NEVER"
+                                style="
+                                    -fx-background-color: transparent;
+                                    -fx-border-color: transparent;
+                                ">
+                        <content>
+                            <VBox fx:id="messageListBox"
+                                  spacing="4"
+                                  fillWidth="true"
+                                  style="-fx-background-color: transparent;">
+                                <padding>
+                                    <Insets top="10" right="0" bottom="10" left="0"/>
+                                </padding>
+                            </VBox>
+                        </content>
+                    </ScrollPane>
+                </VBox>
+            </StackPane>
+
+        </StackPane>
+    </center>
+
+    <!-- 상단: 타이머 -->
+    <top>
+        <HBox spacing="18" alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10" right="16" bottom="10" left="16"/>
+            </padding>
+            <Label fx:id="timerLabel"
+                   text="20초"
+                   style="-fx-font-size:20; -fx-font-weight:800; -fx-text-fill:white;"/>
+            <Label text="3턴 후 카드지급"
+                   style="-fx-font-size:14; -fx-text-fill:#ffe08a;"/>
+        </HBox>
+    </top>
+
+    <!-- 하단: 말풍선 버튼 + 턴 표시 (왼쪽 아래) -->
+    <bottom>
+        <HBox spacing="16" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="14" left="10"/>
+            </padding>
+
+            <Button fx:id="messageButton"
+                    onAction="#handleCheer"
+                    style="
+                        -fx-background-color: transparent;
+                        -fx-padding: 0;
+                    ">
+                <graphic>
+                    <ImageView fitHeight="40" preserveRatio="true">
+                        <image>
+                            <Image url="/images/message/btn_message.png"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Label fx:id="turnLabel"
+                   text="내 턴 (위 유저)"
+                   style="-fx-font-size:18; -fx-font-weight:800; -fx-text-fill:white;"/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
