@@ -8,3 +8,18 @@
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
+# Gradle
+.gradle/
+build/
+
+# IntelliJ
+.idea/
+out/
+*.iml
+
+# Java Class files
+*.class
+
+# OS
+.DS_Store
+Thumbs.db
