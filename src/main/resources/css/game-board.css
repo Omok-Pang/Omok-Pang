@@ -1,0 +1,13 @@
+/* 왼쪽 말풍선 리스트용 ScrollPane 배경 전부 투명 */
+.cheer-scroll,
+.cheer-scroll > .viewport,
+.cheer-scroll .scroll-bar,
+.cheer-scroll .corner {
+    -fx-background-color: transparent;
+}
+
+/* 스크롤바 트랙/썸도 투명하게 (필요 없으면 생략 가능) */
+.cheer-scroll .scroll-bar:vertical .track,
+.cheer-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: transparent;
+}
