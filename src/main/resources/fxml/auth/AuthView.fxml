@@ -19,18 +19,19 @@
     </ImageView>
 
     <!-- 중앙 로그인 박스 -->
-    <StackPane prefWidth="500" prefHeight="380"
-               AnchorPane.leftAnchor="200" AnchorPane.topAnchor="100">
+    <StackPane prefWidth="500" prefHeight="420"
+               AnchorPane.leftAnchor="170" AnchorPane.topAnchor="90">
 
         <!-- 박스 배경 이미지 -->
-        <ImageView fitWidth="265" fitHeight="201" preserveRatio="false" mouseTransparent="true">
+        <ImageView fitWidth="520" fitHeight="360"
+                   preserveRatio="false" mouseTransparent="true">
             <image>
                 <Image url="@/images/login/loginBf_Box.png" />
             </image>
         </ImageView>
 
         <!-- 탭 -->
-        <TabPane fx:id="authTabs" prefWidth="420" prefHeight="340"
+        <TabPane fx:id="authTabs" prefWidth="480" prefHeight="360"
                  tabClosingPolicy="UNAVAILABLE">
 
             <!-- 로그인 탭 -->
@@ -55,7 +56,8 @@
                                           -fx-font-size: 14;
                                           -fx-padding: 10;" />
 
-                    <Button onAction="#handleLogin"
+                    <Button fx:id="loginButton"
+                            onAction="#handleLogin"
                             style="-fx-background-color: transparent; -fx-cursor: hand;">
                         <graphic>
                             <ImageView fitWidth="200" fitHeight="60" preserveRatio="true">
