@@ -68,7 +68,7 @@
                     </ScrollPane>
 
                     <!-- 버튼 -->
-                    <Button text="확인" onAction="#handleConfirm"
+                    <Button fx:id="confirmButton" text="확인" onAction="#handleConfirm"
                             style="
                                 -fx-background-color: linear-gradient(#222,#111);
                                 -fx-text-fill: white;
