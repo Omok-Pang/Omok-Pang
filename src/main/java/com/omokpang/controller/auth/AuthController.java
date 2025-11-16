@@ -5,7 +5,10 @@
 
 package com.omokpang.controller.auth;
 
+import com.omokpang.domain.user.User;
+import com.omokpang.controller.main.MainController;
 import com.omokpang.service.AuthService;
+import com.omokpang.session.AppSession;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -75,10 +78,13 @@ public class AuthController {
             return;
         }
 
-        boolean ok = authService.login(id, pw);
-        if (ok) {
+        // ✅ 로그인 + 유저 정보 가져오기
+        User user = authService.loginAndGetUser(id, pw);
+        if (user != null) {
+            AppSession.setCurrentUser(user);
+
             loginMsgLabel.setText("");
-            goToMainView();
+            goToMainView(user);   // User를 들고 메인 화면으로
         } else {
             showLoginError("잘못된 닉네임 또는 비밀번호입니다.");
         }
@@ -217,14 +223,17 @@ public class AuthController {
         }
     }
 
-    private void goToMainView() {
+    private void goToMainView(User user) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
             Parent mainRoot = loader.load();
 
-            // ✅ 로그인한 닉네임 전달
-            com.omokpang.controller.main.MainController controller = loader.getController();
-            //controller.setUsername(loginIdField.getText());
+            // ✅ 로그인한 유저 정보 MainController에 전달
+            MainController controller = loader.getController();
+            // 닉네임
+            controller.setUserInfo(user.getNickname(), "/images/user/ic_profile.png");
+            // 포인트 / 승리 수
+            controller.setStats(user.getPoints(), user.getWins());
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
             stage.setScene(new Scene(mainRoot));
