@@ -1,7 +1,7 @@
 package com.omokpang.controller.game;
 
+import com.omokpang.controller.effect.TimeLockNoticeController;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 import java.io.IOException;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
@@ -92,8 +92,11 @@ public class GameBoardController {
 
     /* ================== 타이머 관련 ================== */
 
+    private static final int DEFAULT_TURN_SECONDS = 20; // 기본 턴 시간
+    private static final int TIMELOCK_TURN_SECONDS = 3; // Time Lock 적용 시 턴 시간
+
     private Timeline timer;   // 1초마다 동작하는 타이머
-    private int remain = 20;  // 남은 시간(초)
+    private int remain = DEFAULT_TURN_SECONDS;  // 남은 시간(초)
 
     /* ================== 프리셋 말풍선 텍스트 ================== */
 
@@ -340,7 +343,14 @@ public class GameBoardController {
      * 새 턴이 시작될 때 타이머를 초기화하고 20초 카운트다운을 시작한다.
      */
     private void startTurn() {
-        remain = 20;
+        startTurnWithSeconds(DEFAULT_TURN_SECONDS);
+    }
+
+    /** seconds 만큼의 제한시간으로 턴 타이머 시작 (TimeLock에서도 재사용) */
+    private void startTurnWithSeconds(int seconds) {
+        stopTimer(); // 기존 타이머 정지
+
+        remain = seconds;
         timerLabel.setText(remain + "초");
 
         timer = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
@@ -411,12 +421,6 @@ public class GameBoardController {
 
     /**
      * 오른쪽 아래 카드 버튼 클릭 시 호출.
-     *  - CardUseModal.fxml을 모달 창으로 띄운다.
-     */
-    /* ================== 카드 선택 모달 ================== */
-
-    /**
-     * 오른쪽 아래 카드 버튼 클릭 시 호출.
      *  - CardUseModal.fxml을 로드해서 centerStack 위에 오버레이로 올린다.
      */
     @FXML
@@ -425,17 +429,47 @@ public class GameBoardController {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/game/CardUseModal.fxml")
             );
-            Parent overlayRoot = loader.load();
+            StackPane modalRoot = loader.load();
+            CardUseModalController modalController = loader.getController();
 
-            // 필요하면 여기서 컨트롤러를 꺼내서 콜백을 심을 수 있음.
-            // CardUseModalController controller = loader.getController();
-            // controller.setOnCardSelected(...);
+            // ★ 타임락 카드 사용 시 로직 연결 (지금은 내 화면에서 테스트용)
+            modalController.setOnCardSelected(() -> {
+                // 여기서 타임락 카드 효과 호출
+                applyTimeLockToOpponent();
+            });
 
-            // centerStack 맨 위에 모달 추가 → 배경 위에 반투명 + 카드 UI가 올라감
-            centerStack.getChildren().add(overlayRoot);
-
+            centerStack.getChildren().add(modalRoot);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /* ================== Time Lock 카드 효과 ================== */
+
+    /**
+     * Time Lock 카드가 상대에게 적용될 때 호출되는 메서드.
+     *  - 현재 타이머를 멈추고
+     *  - TimeLockNotice.fxml 오버레이를 2초간 보여준 뒤
+     *  - 제한시간을 3초로 줄여서 다시 타이머 시작
+     */
+    private void applyTimeLockToOpponent() {
+        stopTimer(); // 기존 20초 타이머 정지
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/TimeLockNotice.fxml")
+            );
+            loader.load();
+            TimeLockNoticeController noticeController = loader.getController();
+
+            // 안내창을 centerStack 위에 올리고, 2초 뒤 사라지면 3초 타이머 시작
+            noticeController.showOn(centerStack, () -> {
+                startTurnWithSeconds(TIMELOCK_TURN_SECONDS);
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+            // 안내창 로드에 실패해도 타임락 효과(3초 타이머)는 적용되도록
+            startTurnWithSeconds(TIMELOCK_TURN_SECONDS);
         }
     }
 }

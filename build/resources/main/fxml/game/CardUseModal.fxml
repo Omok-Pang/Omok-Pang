@@ -3,8 +3,6 @@
   역할: 보유 카드 중 사용할 카드 선택(필요 시 대상 수집)
   핵심기능: 손패 렌더링 / 선택 확정 콜백·전송
 -->
-
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
