@@ -1,6 +1,8 @@
 package com.omokpang.controller.game;
 
 import com.omokpang.controller.effect.TimeLockNoticeController;
+import com.omokpang.controller.effect.SwapSelectGuideController;
+import com.omokpang.controller.effect.SwapNoticeController;
 import javafx.fxml.FXMLLoader;
 import java.io.IOException;
 import javafx.animation.KeyFrame;
@@ -118,6 +120,13 @@ public class GameBoardController {
             "망했팡...",
             "다음 판엔 이긴다팡"
     };
+
+    /* ================== Swap 카드 관련 상태 ================== */
+
+    // Swap 선택 안내 오버레이 컨트롤러 (내 화면용)
+    private SwapSelectGuideController swapGuideController;
+    // 추후 실제 돌 선택 모드 분기용 플래그 (지금은 안내만 띄우는 용도)
+    private boolean swapSelecting = false;
 
     /* ================== 초기화 ================== */
 
@@ -434,8 +443,9 @@ public class GameBoardController {
 
             // ★ 타임락 카드 사용 시 로직 연결 (지금은 내 화면에서 테스트용)
             modalController.setOnCardSelected(() -> {
-                // 여기서 타임락 카드 효과 호출
-                applyTimeLockToOpponent();
+                enterSwapSelectionMode();
+                // 나중에 카드 종류가 여러 개가 되면 여기서 분기:
+                // e.g. if(cardType == TIME_LOCK) applyTimeLockToOpponent(); ...
             });
 
             centerStack.getChildren().add(modalRoot);
@@ -470,6 +480,60 @@ public class GameBoardController {
             e.printStackTrace();
             // 안내창 로드에 실패해도 타임락 효과(3초 타이머)는 적용되도록
             startTurnWithSeconds(TIMELOCK_TURN_SECONDS);
+        }
+    }
+
+    /* ================== Swap 카드 효과 ================== */
+
+    /**
+     * Swap 카드를 사용한 "나의 화면"에서
+     * 돌 선택 안내 오버레이를 띄우는 메서드.
+     *  (실제 돌 선택/교환 로직은 추후 swapSelecting 플래그를 기준으로 구현)
+     */
+    private void enterSwapSelectionMode() {
+        swapSelecting = true;   // 추후 보드 클릭 로직에서 이 값으로 분기 예정
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SwapSelectGuide.fxml")
+            );
+            loader.load();
+            swapGuideController = loader.getController();
+            // centerStack 맨 위에 안내 오버레이 올리기
+            swapGuideController.showOn(centerStack);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * (추후 사용) Swap 선택/교환이 모두 끝났을 때
+     * 내 화면에서 안내 오버레이를 닫고 선택 모드를 해제한다.
+     *  - 나중에 "Enter 눌렀을 때" 실제 교환까지 끝난 시점에 호출 예정.
+     */
+    private void finishSwapSelectionMode() {
+        swapSelecting = false;
+        if (swapGuideController != null) {
+            swapGuideController.close();
+            swapGuideController = null;
+        }
+    }
+
+    /**
+     * (온라인 전용) "상대방이 Swap 카드를 썼다"는 이벤트가
+     * 네 클라이언트로 들어왔을 때 호출하면 되는 메서드.
+     *  - TimeLockNotice 와 동일하게 2초 안내만 보여주고 닫힌다.
+     */
+    public void showSwapUsedByOpponent() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SwapNotice.fxml")
+            );
+            loader.load();
+            SwapNoticeController controller = loader.getController();
+            controller.showOn(centerStack, null);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
