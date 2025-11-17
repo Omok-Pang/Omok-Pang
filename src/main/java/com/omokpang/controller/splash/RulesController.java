@@ -22,7 +22,7 @@ public class RulesController {
     @FXML
     private void handleConfirm() {
         try {
-            FXMLLoader loader = new FXMLLoader( getClass().getResource("/fxml/lobby/MatchSuccessView.fxml"));
+            FXMLLoader loader = new FXMLLoader( getClass().getResource("/fxml/game/GameIntroView.fxml"));
             Parent root = loader.load();
 
             Stage stage = (Stage) confirmButton.getScene().getWindow();
