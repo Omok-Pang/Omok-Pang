@@ -11,6 +11,7 @@ import javafx.event.ActionEvent;
 /** 역할/핵심기능: 시작화면 제어 / START 클릭 시 규칙 화면으로 전환 */
 public class SplashController {
     public void handleStart(ActionEvent e) {
-        SceneRouter.go("/fxml/splash/RulesView.fxml");
+        // SceneRouter.go("/fxml/splash/RulesView.fxml");
+        SceneRouter.go("/fxml/game/GameIntroView.fxml");
     }
 }

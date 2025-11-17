@@ -98,6 +98,37 @@
                 </StackPane>
             </VBox>
 
+            <!-- ================ 🔹 왼쪽 유저 아바타 (3번 플레이어 자리) ================ -->
+            <StackPane fx:id="leftPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_LEFT">
+                <StackPane.margin>
+                    <!-- 보드와의 간격 -->
+                    <Insets left="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="leftPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user3.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- ================ 🔹 오른쪽 유저 아바타 (4번 플레이어 자리) ================ -->
+            <StackPane fx:id="rightPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_RIGHT">
+                <StackPane.margin>
+                    <Insets right="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="rightPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user4.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
             <!-- ================ 왼쪽 말풍선 선택 패널 ================ -->
             <StackPane fx:id="messageSelectPane"
                        visible="false"
@@ -183,8 +214,26 @@
 
             <!-- 현재 턴 안내 텍스트 -->
             <Label fx:id="turnLabel"
-                   text="내 턴 (위 유저)"
+                   text="내 턴 (아래 유저)"
                    style="-fx-font-size:18; -fx-font-weight:800; -fx-text-fill:white;"/>
+
+            <!-- 오른쪽 끝으로 밀어내는 스페이서 -->
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <!-- 🔹 특수 카드 버튼 (오른쪽 아래) -->
+            <Button fx:id="cardButton"
+                    onAction="#handleOpenCardModal"
+                    style="-fx-background-color: transparent; -fx-padding: 0;">
+                <graphic>
+                    <ImageView fitHeight="60" preserveRatio="true">
+                        <image>
+                            <!-- 작은 카드 아이콘 -->
+                            <Image url="/images/gamecard/sm_Swap.png"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
         </HBox>
     </bottom>
 

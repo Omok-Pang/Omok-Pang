@@ -3,3 +3,68 @@
   역할: 보유 카드 중 사용할 카드 선택(필요 시 대상 수집)
   핵심기능: 손패 렌더링 / 선택 확정 콜백·전송
 -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.game.CardUseModalController"
+           fx:id="root"
+           prefWidth="750" prefHeight="600"
+           style="-fx-background-color: rgba(0,0,0,0.55);">
+
+    <!-- 중앙 카드 선택 박스 -->
+    <VBox alignment="CENTER" spacing="18">
+        <!-- 보라색 상단 헤더 영역 -->
+        <StackPane maxWidth="520">
+            <StackPane style="
+                        -fx-background-color: linear-gradient(to bottom, #ff7de5, #c157ff);
+                        -fx-background-radius: 22 22 0 0;
+                        -fx-padding: 24 40 20 40;">
+                <VBox alignment="CENTER" spacing="8">
+                    <Label text="사용할 카드를 선택해주세요!"
+                           style="-fx-text-fill: white; -fx-font-size: 22; -fx-font-weight: 800;"/>
+                    <Label text="한번 선택하면 되돌릴 수 없습니다."
+                           style="-fx-text-fill: #ffe8ff; -fx-font-size: 14; -fx-font-weight: 600;"/>
+                </VBox>
+            </StackPane>
+        </StackPane>
+
+        <!-- 카드 영역 + 아래 버튼까지 감싸는 패널 -->
+        <StackPane maxWidth="520">
+            <VBox spacing="20" alignment="CENTER" style="
+                    -fx-background-color: rgba(255,255,255,0.96);
+                    -fx-background-radius: 0 0 22 22;
+                    -fx-padding: 24 40 24 40;">
+                <!-- 실제 카드들 -->
+                <HBox alignment="CENTER" spacing="24">
+                    <!-- 지금은 Swap 카드 1장만 사용 -->
+                    <Button onAction="#handleSelectCard"
+                            style="-fx-background-color: transparent; -fx-padding: 0;">
+                        <graphic>
+                            <ImageView fitHeight="220" preserveRatio="true">
+                                <image>
+                                    <Image url="/images/gamecard/la_Swap.png"/>
+                                </image>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+                </HBox>
+
+                <!-- 닫기 버튼 -->
+                <Button text="닫기"
+                        onAction="#handleClose"
+                        style="
+                            -fx-background-color: linear-gradient(#222,#111);
+                            -fx-text-fill: white;
+                            -fx-font-weight: 700;
+                            -fx-padding: 8 26;
+                            -fx-background-radius: 18;
+                        "/>
+            </VBox>
+        </StackPane>
+    </VBox>
+</StackPane>

@@ -1,5 +1,8 @@
 package com.omokpang.controller.game;
 
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import java.io.IOException;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -34,6 +37,9 @@ public class GameBoardController {
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
 
+    // ✅ center 영역 최상단 StackPane (오버레이를 얹을 컨테이너)
+    @FXML private StackPane centerStack;
+
     // 보드 UI (360x360 Pane)
     @FXML private Pane boardRoot;
 
@@ -47,8 +53,17 @@ public class GameBoardController {
     @FXML private ImageView topPlayerImage;
     @FXML private ImageView bottomPlayerImage;
 
+    // 좌/우 플레이어 아바타 컨테이너 및 이미지 (4인용 자리)
+    @FXML private StackPane leftPlayerContainer;
+    @FXML private StackPane rightPlayerContainer;
+    @FXML private ImageView leftPlayerImage;
+    @FXML private ImageView rightPlayerImage;
+
     // 말풍선 버튼 (왼쪽 아래)
     @FXML private Button messageButton;
+
+    // 🔹 특수 카드 버튼 (오른쪽 아래)
+    @FXML private Button cardButton;
 
     // 왼쪽 말풍선 선택 패널
     @FXML private StackPane messageSelectPane;   // 전체 패널
@@ -112,6 +127,16 @@ public class GameBoardController {
         // 필요 시 위쪽 유저도 동일하게 처리
         topPlayerContainer.setMaxWidth(Region.USE_PREF_SIZE);
         topPlayerContainer.setMaxHeight(Region.USE_PREF_SIZE);
+
+        // 좌/우 플레이어도 동일하게 (null 체크는 방어용)
+        if (leftPlayerContainer != null) {
+            leftPlayerContainer.setMaxWidth(Region.USE_PREF_SIZE);
+            leftPlayerContainer.setMaxHeight(Region.USE_PREF_SIZE);
+        }
+        if (rightPlayerContainer != null) {
+            rightPlayerContainer.setMaxWidth(Region.USE_PREF_SIZE);
+            rightPlayerContainer.setMaxHeight(Region.USE_PREF_SIZE);
+        }
 
         // 보드 사이즈(360x360) 설정 및 격자 그리기
         boardRoot.setPrefSize(SIZE, SIZE);
@@ -380,5 +405,37 @@ public class GameBoardController {
         // TODO: 온라인 모드일 경우
         //  - 이 메시지를 서버로 보내서 상대 화면에도 같은 말풍선이 뜨도록 해야 한다.
         //  - 예: websocket.send({type:"CHEER", message:text})
+    }
+
+    /* ================== 카드 선택 모달 ================== */
+
+    /**
+     * 오른쪽 아래 카드 버튼 클릭 시 호출.
+     *  - CardUseModal.fxml을 모달 창으로 띄운다.
+     */
+    /* ================== 카드 선택 모달 ================== */
+
+    /**
+     * 오른쪽 아래 카드 버튼 클릭 시 호출.
+     *  - CardUseModal.fxml을 로드해서 centerStack 위에 오버레이로 올린다.
+     */
+    @FXML
+    private void handleOpenCardModal() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/game/CardUseModal.fxml")
+            );
+            Parent overlayRoot = loader.load();
+
+            // 필요하면 여기서 컨트롤러를 꺼내서 콜백을 심을 수 있음.
+            // CardUseModalController controller = loader.getController();
+            // controller.setOnCardSelected(...);
+
+            // centerStack 맨 위에 모달 추가 → 배경 위에 반투명 + 카드 UI가 올라감
+            centerStack.getChildren().add(overlayRoot);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
