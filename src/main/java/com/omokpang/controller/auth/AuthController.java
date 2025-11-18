@@ -9,6 +9,8 @@ import com.omokpang.domain.user.User;
 import com.omokpang.controller.main.MainController;
 import com.omokpang.service.AuthService;
 import com.omokpang.session.AppSession;
+import com.omokpang.net.OmokClient;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -225,14 +227,20 @@ public class AuthController {
 
     private void goToMainView(User user) {
         try {
+            // ✅ 1) 서버 연결 (이미 연결된 상태면 내부에서 그냥 리턴)
+            OmokClient client = OmokClient.getInstance();
+            if (!client.isConnected()) {
+                client.connect("127.0.0.1", 9000); // 서버 IP/포트
+                // 로그인 직후 서버에 내 닉네임 알려주기
+                client.send("LOGIN " + user.getNickname());
+            }
+
+            // ✅ 2) 기존 MainView 전환 로직 그대로 유지
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
             Parent mainRoot = loader.load();
 
-            // ✅ 로그인한 유저 정보 MainController에 전달
             MainController controller = loader.getController();
-            // 닉네임
             controller.setUserInfo(user.getNickname(), "/images/user/ic_profile.png");
-            // 포인트 / 승리 수
             controller.setStats(user.getPoints(), user.getWins());
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
@@ -242,6 +250,9 @@ public class AuthController {
         } catch (IOException e) {
             e.printStackTrace();
             loginMsgLabel.setText("화면 전환 오류 발생");
+        } catch (Exception e) {
+            e.printStackTrace();
+            loginMsgLabel.setText("서버 접속 오류 발생");
         }
     }
 
