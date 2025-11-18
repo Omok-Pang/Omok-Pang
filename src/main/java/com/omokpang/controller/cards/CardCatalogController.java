@@ -5,5 +5,17 @@
 
 package com.omokpang.controller.cards;
 
+import javafx.fxml.FXML;
+import javafx.stage.Stage;
+import javafx.scene.control.Button;
+
 public class CardCatalogController {
+
+    @FXML private Button closeBtn;
+
+    @FXML
+    private void handleClose() {
+        Stage stage = (Stage) closeBtn.getScene().getWindow();
+        stage.close();
+    }
 }
