@@ -17,6 +17,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.util.Duration;
+import com.omokpang.domain.card.Card;
+import java.util.List;
+import com.omokpang.domain.card.CardEffect;
+
 
 /**
  * 역할:
@@ -380,5 +384,12 @@ public class GameBoardController {
         // TODO: 온라인 모드일 경우
         //  - 이 메시지를 서버로 보내서 상대 화면에도 같은 말풍선이 뜨도록 해야 한다.
         //  - 예: websocket.send({type:"CHEER", message:text})
+    }
+
+    private List<Card> receivedCards;
+
+    public void setReceivedCards(List<Card> cards) {
+        this.receivedCards = cards;
+        // 필요하다면 여기서 UI 업데이트도 가능 (예: 카드 패널 표시 등)
     }
 }
