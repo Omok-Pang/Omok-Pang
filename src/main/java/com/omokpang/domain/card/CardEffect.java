@@ -5,5 +5,7 @@
 
 package com.omokpang.domain.card;
 
-public class CardEffect {
+// public class를 public interface로 수정함
+public interface CardEffect {
+    void apply(CardType type);
 }

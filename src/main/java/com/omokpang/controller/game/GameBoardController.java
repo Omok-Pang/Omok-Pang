@@ -18,6 +18,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.util.Duration;
 
+import java.util.List;
+import com.omokpang.domain.card.Card;
+
 /**
  * 역할:
  *  - 실제 오목판을 그리고, 유저가 돌을 두는 로직을 관리한다.
@@ -30,6 +33,8 @@ import javafx.util.Duration;
  *  - WebSocket 등을 사용해 상대방에게 말풍선/돌 두기 이벤트를 실시간으로 보내도록 수정.
  */
 public class GameBoardController {
+
+    private List<Card> receivedCards;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -381,4 +386,15 @@ public class GameBoardController {
         //  - 이 메시지를 서버로 보내서 상대 화면에도 같은 말풍선이 뜨도록 해야 한다.
         //  - 예: websocket.send({type:"CHEER", message:text})
     }
+
+    public void setReceivedCards(List<Card> cards) {
+        this.receivedCards = cards;
+
+        // 확인용 출력 → 나중에 지워도 됨
+        System.out.println("===== [받은 카드 목록] =====");
+        for (Card c : cards) {
+            System.out.println("- " + c.getType());
+        }
+    }
+
 }

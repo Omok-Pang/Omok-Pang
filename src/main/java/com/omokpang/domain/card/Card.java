@@ -6,4 +6,23 @@
 package com.omokpang.domain.card;
 
 public class Card {
+
+    private final CardType type;
+
+    public Card(CardType type) {
+        this.type = type;
+    }
+
+    public CardType getType() {
+        return type;
+    }
+
+    public String getImagePath() {
+        return type.getImagePath();
+    }
+
+    public String getName() {
+        return type.name();
+    }
 }
+

@@ -22,7 +22,7 @@ public class App extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         // 1) 최초 화면: SplashView.fxml 로드
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/splash/SplashView.fxml"));
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/cards/CardSelectView.fxml"));
 
         // 2) Scene 생성 및 Stage 세팅
         Scene scene = new Scene(root);
