@@ -23,10 +23,10 @@ public class MatchSuccessController {
 
         // 🔥 이동 버튼 이미지 로딩
         Image normal = new Image(
-                getClass().getResource("/images/button/match_btn.png").toExternalForm()
+                getClass().getResource("/images/button/matchS_btn.png").toExternalForm()
         );
         Image hover = new Image(
-                getClass().getResource("/images/button/match_btn.png").toExternalForm()
+                getClass().getResource("/images/button/matchS_btn.png").toExternalForm()
         );
         moveButtonImage.setImage(normal);
 

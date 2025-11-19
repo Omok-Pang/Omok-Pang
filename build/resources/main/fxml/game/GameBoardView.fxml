@@ -220,19 +220,12 @@
             <!-- 오른쪽 끝으로 밀어내는 스페이서 -->
             <Region HBox.hgrow="ALWAYS"/>
 
-            <!-- 🔹 특수 카드 버튼 (오른쪽 아래) -->
-            <Button fx:id="cardButton"
-                    onAction="#handleOpenCardModal"
-                    style="-fx-background-color: transparent; -fx-padding: 0;">
-                <graphic>
-                    <ImageView fitHeight="60" preserveRatio="true">
-                        <image>
-                            <!-- 작은 카드 아이콘 -->
-                            <Image url="/images/gamecard/sm_Swap.png"/>
-                        </image>
-                    </ImageView>
-                </graphic>
-            </Button>
+            <!-- 🔹 선택된 카드 아이콘 슬롯 -->
+            <HBox fx:id="cardSlotBox"
+                  spacing="8"
+                  alignment="CENTER_RIGHT">
+                <!-- GameBoardController.renderCardSlots() 에서 sm_* 아이콘을 채움 -->
+            </HBox>
 
         </HBox>
     </bottom>

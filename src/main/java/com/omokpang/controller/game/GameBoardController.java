@@ -3,6 +3,7 @@ package com.omokpang.controller.game;
 import com.omokpang.controller.effect.TimeLockNoticeController;
 import com.omokpang.controller.effect.SwapSelectGuideController;
 import com.omokpang.controller.effect.SwapNoticeController;
+
 import javafx.fxml.FXMLLoader;
 import java.io.IOException;
 import javafx.animation.KeyFrame;
@@ -19,12 +20,12 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.util.Duration;
 import com.omokpang.domain.card.Card;
 import java.util.List;
-import com.omokpang.domain.card.CardEffect;
 
 /**
  * 역할:
@@ -55,8 +56,6 @@ public class GameBoardController {
     // 위/아래 플레이어 아바타 컨테이너 및 이미지
     @FXML private StackPane topPlayerContainer;
     @FXML private StackPane bottomPlayerContainer;
-    @FXML private ImageView topPlayerImage;
-    @FXML private ImageView bottomPlayerImage;
 
     // 좌/우 플레이어 아바타 컨테이너 및 이미지 (4인용 자리)
     @FXML private StackPane leftPlayerContainer;
@@ -67,9 +66,6 @@ public class GameBoardController {
     // 말풍선 버튼 (왼쪽 아래)
     @FXML private Button messageButton;
 
-    // 🔹 특수 카드 버튼 (오른쪽 아래)
-    @FXML private Button cardButton;
-
     // 왼쪽 말풍선 선택 패널
     @FXML private StackPane messageSelectPane;   // 전체 패널
     @FXML private VBox messageListBox;          // 패널 안의 메시지 목록 컨테이너
@@ -77,6 +73,12 @@ public class GameBoardController {
     // 아래 유저 말풍선 영역 (말풍선 이미지 + 텍스트)
     @FXML private StackPane bottomMessageBubble;
     @FXML private Label bottomMessageLabel;
+
+    // 🔹 선택된 카드 아이콘 표시 영역 (오른쪽 아래)
+    @FXML private HBox cardSlotBox;
+
+    // 카드 선택 화면에서 전달받은 카드 두 장
+    private List<Card> receivedCards;
 
     /* ================== 보드 / 턴 관련 상수 & 상태 ================== */
 
@@ -435,9 +437,16 @@ public class GameBoardController {
     /**
      * 오른쪽 아래 카드 버튼 클릭 시 호출.
      *  - CardUseModal.fxml을 로드해서 centerStack 위에 오버레이로 올린다.
+     *  - 현재 보유중인 카드(receivedCards)를 모달에 전달.
      */
-    @FXML
-    private void handleOpenCardModal() {
+    // ❌ @FXML 제거 + 이름만 살짝 변경 (선택사항, 유지하고 싶으면 그대로 두고 호출만 바꿔도 됨)
+    private void openCardUseModal() {
+        // 아직 받은 카드가 없으면 모달을 열지 않음
+        if (receivedCards == null || receivedCards.isEmpty()) {
+            System.out.println("[DEBUG] 사용 가능한 카드가 없습니다.");
+            return;
+        }
+
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/game/CardUseModal.fxml")
@@ -445,11 +454,14 @@ public class GameBoardController {
             StackPane modalRoot = loader.load();
             CardUseModalController modalController = loader.getController();
 
-            // ★ 타임락 카드 사용 시 로직 연결 (지금은 내 화면에서 테스트용)
-            modalController.setOnCardSelected(() -> {
-                enterSwapSelectionMode();
-                // 나중에 카드 종류가 여러 개가 되면 여기서 분기:
-                // e.g. if(cardType == TIME_LOCK) applyTimeLockToOpponent(); ...
+            // 🔹 현재 보유 카드 전달 → la_이미지로 렌더링됨
+            modalController.setCards(receivedCards);
+
+            // 🔹 선택된 카드에 대한 콜백 (지금은 콘솔 출력만)
+            modalController.setOnCardSelected(selectedCard -> {
+                System.out.println("[DEBUG] 선택된 카드: " + selectedCard.getName());
+                // TODO: 이후에 카드 타입에 따라 효과 분기
+                // switch (selectedCard.getType()) { ... }
             });
 
             centerStack.getChildren().add(modalRoot);
@@ -539,5 +551,59 @@ public class GameBoardController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 카드 선택 화면에서 전달받은 카드 리스트 세팅
+     *  - me_*.png 경로를 받아와서
+     *    보드 화면에서는 동일 이름의 sm_*.png 아이콘으로 표시한다.
+     */
+    public void setReceivedCards(List<Card> cards) {
+        this.receivedCards = cards;
+        renderCardSlots();
+    }
+
+    /** 오른쪽 아래 cardSlotBox 에 sm_* 아이콘들을 렌더링 */
+    private void renderCardSlots() {
+        if (cardSlotBox == null) return;
+
+        cardSlotBox.getChildren().clear();
+        if (receivedCards == null || receivedCards.isEmpty()) {
+            return;
+        }
+
+        for (Card card : receivedCards) {
+            String bigPath = card.getImagePath();           // 예: /images/gamecard/me_Defense.png
+            String smallPath = toSmallImagePath(bigPath);   // 예: /images/gamecard/sm_Defense.png
+
+            Image img = new Image(
+                    getClass().getResource(smallPath).toExternalForm()
+            );
+            ImageView iv = new ImageView(img);
+            iv.setFitHeight(60);
+            iv.setPreserveRatio(true);
+
+            // 👉 아이콘 자체를 버튼으로 만들어서 눌렀을 때 모달 오픈
+            Button btn = new Button();
+            btn.setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+            btn.setGraphic(iv);
+
+            // 지금은 어떤 카드를 눌러도 동일하게 "보유 카드 선택 모달"을 띄우도록 처리
+            btn.setOnAction(e -> openCardUseModal());
+
+            cardSlotBox.getChildren().add(btn);
+        }
+    }
+
+    /**
+     * me_*.png 경로를 sm_*.png 경로로 변환한다.
+     *  - 카드 이미지 파일 구조:
+     *      /images/gamecard/me_카드이름.png  (카드 선택 화면)
+     *      /images/gamecard/sm_카드이름.png  (게임 보드 오른쪽 아이콘)
+     */
+    private String toSmallImagePath(String bigPath) {
+        if (bigPath == null) return "/images/gamecard/sm_SharedStone.png";
+        // 안전하게 gamecard 디렉터리 기준으로만 치환
+        return bigPath.replace("/me_", "/sm_");
     }
 }

@@ -7,6 +7,7 @@ package com.omokpang.controller.cards;
 
 import com.omokpang.domain.card.Card;
 import com.omokpang.service.CardService;
+import com.omokpang.service.UserPointService;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -45,19 +46,35 @@ public class CardSelectController {
     @FXML private Label pointLabel;
 
     private final CardService cardService = new CardService();
+    private final UserPointService userPointService = new UserPointService();
+
     private List<Card> cards;
 
     private Timeline timer;
     private int remain = 20;
 
-    private int point = 120;  // 테스트용
+    // 현재 로그인 유저 id (이전 화면에서 세팅해줄 값)
+    private long userId;
+
+    // 현재 화면에서 사용하는 포인트(= DB의 users.points)
+    private int point;
 
     @FXML
     private void initialize() {
-        pointLabel.setText(String.valueOf(point));
-
+        // point 값은 setUserId()에서 DB 조회 후 세팅
         timerLabel.setStyle("-fx-text-fill: white;");
         startTimer();
+    }
+
+    /**
+     * 로그인 유저 정보 세팅용
+     * - 이전 화면에서 FXMLLoader로 이 컨트롤러를 가져와서 호출해주면 됨.
+     *   예) controller.setUserId(loggedInUserId);
+     */
+    public void setUserId(long userId) {
+        this.userId = userId;
+        this.point = userPointService.getPoint(userId);
+        pointLabel.setText(String.valueOf(point));
     }
 
     /** 카드 받기 */
@@ -69,7 +86,6 @@ public class CardSelectController {
         // UI 전환
         beforeBox.setVisible(false);
         afterBox.setVisible(true);
-
 
         // 카드 받기 버튼은 다시 못 누르게
         receiveBtn.setDisable(true);
@@ -85,13 +101,33 @@ public class CardSelectController {
         iv.setImage(new Image(getClass().getResource(path).toExternalForm()));
     }
 
+    /**
+     * 포인트 사용 공통 처리
+     * - amount 만큼 포인트가 있는지 체크
+     * - DB에서 차감(users.points - amount)
+     * - 성공하면 로컬 point 도 갱신
+     */
+    private boolean usePoint(int amount) {
+        if (point < amount) {
+            // 필요하다면 Alert 로 "포인트 부족" 안내 가능
+            return false;
+        }
+
+        boolean success = userPointService.decreasePoint(userId, amount);
+        if (!success) {
+            // 동시접속 등으로 DB 업데이트 실패한 경우 방어
+            return false;
+        }
+
+        point -= amount;
+        pointLabel.setText(String.valueOf(point));
+        return true;
+    }
+
     /** 40pt 리롤 1 */
     @FXML
     private void handleReroll1() {
-        if (point < 40) return;
-
-        point -= 40;
-        pointLabel.setText(String.valueOf(point));
+        if (!usePoint(40)) return;
 
         cards.set(0, cardService.drawOne());
         updateCardImages();
@@ -100,10 +136,7 @@ public class CardSelectController {
     /** 40pt 리롤 2 */
     @FXML
     private void handleReroll2() {
-        if (point < 40) return;
-
-        point -= 40;
-        pointLabel.setText(String.valueOf(point));
+        if (!usePoint(40)) return;
 
         cards.set(1, cardService.drawOne());
         updateCardImages();
@@ -138,14 +171,14 @@ public class CardSelectController {
         if (timer != null) timer.stop();
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/game/GameBoardView.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/game/GameIntroView.fxml"));
             Parent root = loader.load();
 
             // 컨트롤러 가져오기
             com.omokpang.controller.game.GameBoardController controller = loader.getController();
 
             // 정석 방식: setter로 카드 전달
-            //controller.setReceivedCards(cards);
+            controller.setReceivedCards(cards);
 
             Stage stage = (Stage) cardImage1.getScene().getWindow();
             stage.setScene(new Scene(root));
@@ -155,6 +188,7 @@ public class CardSelectController {
             e.printStackTrace();
         }
     }
+
     @FXML
     private void handleOpenCatalog() {
         try {

@@ -37,19 +37,12 @@
                     -fx-background-color: rgba(255,255,255,0.96);
                     -fx-background-radius: 0 0 22 22;
                     -fx-padding: 24 40 24 40;">
-                <!-- 실제 카드들 -->
-                <HBox alignment="CENTER" spacing="24">
-                    <!-- 지금은 Swap 카드 1장만 사용 -->
-                    <Button onAction="#handleSelectCard"
-                            style="-fx-background-color: transparent; -fx-padding: 0;">
-                        <graphic>
-                            <ImageView fitHeight="220" preserveRatio="true">
-                                <image>
-                                    <Image url="/images/gamecard/la_Swap.png"/>
-                                </image>
-                            </ImageView>
-                        </graphic>
-                    </Button>
+
+                <!-- 🔹 실제 카드들이 들어갈 영역: 컨트롤러에서 버튼 생성 -->
+                <HBox fx:id="handCardBox"
+                      alignment="CENTER"
+                      spacing="24">
+                    <!-- CardUseModalController.renderCards() 에서 버튼 추가 -->
                 </HBox>
 
                 <!-- 닫기 버튼 -->
