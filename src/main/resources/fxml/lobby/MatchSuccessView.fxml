@@ -19,7 +19,7 @@
         </image>
     </ImageView>
 
-    <!-- ⭐ 중앙 레이아웃 (MatchingView와 동일) -->
+    <!-- ⭐ 중앙 레이아웃 -->
     <VBox alignment="CENTER"
           spacing="25"
           prefWidth="750" prefHeight="600"
@@ -37,14 +37,10 @@
               prefWidth="600" prefHeight="260">
         </HBox>
 
-        <!-- ⭐ 이동하기 이미지 버튼 (MatchingView와 동일 스타일) -->
-        <Button fx:id="moveBtn"
-                onAction="#onMove"
-                style="-fx-background-color: transparent; -fx-cursor: hand;">
-            <graphic>
-                <ImageView fx:id="moveButtonImage" fitWidth="150" fitHeight="90"/>
-            </graphic>
-        </Button>
+        <!-- ⭐ 5초 뒤 자동 이동 안내 -->
+        <Label fx:id="countdownLabel"
+               text="5초 뒤에 카드 선택 화면으로 넘어갑니다."
+               style="-fx-font-size: 20px; -fx-text-fill: white; -fx-font-weight: bold;"/>
 
     </VBox>
 
