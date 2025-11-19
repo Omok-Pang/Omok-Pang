@@ -145,7 +145,7 @@ public class CardSelectController {
             com.omokpang.controller.game.GameBoardController controller = loader.getController();
 
             // 정석 방식: setter로 카드 전달
-            controller.setReceivedCards(cards);
+            //controller.setReceivedCards(cards);
 
             Stage stage = (Stage) cardImage1.getScene().getWindow();
             stage.setScene(new Scene(root));

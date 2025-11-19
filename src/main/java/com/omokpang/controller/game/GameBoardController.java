@@ -22,6 +22,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.util.Duration;
+import com.omokpang.domain.card.Card;
+import java.util.List;
+import com.omokpang.domain.card.CardEffect;
 
 /**
  * 역할:
@@ -424,6 +427,7 @@ public class GameBoardController {
         // TODO: 온라인 모드일 경우
         //  - 이 메시지를 서버로 보내서 상대 화면에도 같은 말풍선이 뜨도록 해야 한다.
         //  - 예: websocket.send({type:"CHEER", message:text})
+
     }
 
     /* ================== 카드 선택 모달 ================== */

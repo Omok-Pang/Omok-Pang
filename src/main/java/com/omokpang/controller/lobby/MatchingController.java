@@ -4,6 +4,7 @@ import com.omokpang.SceneRouter;
 import com.omokpang.domain.user.User;
 import com.omokpang.net.OmokClient;
 import com.omokpang.session.AppSession;
+import com.omokpang.session.MatchSession;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
@@ -74,9 +75,21 @@ public class MatchingController {
     private void handleServerMessage(String msg) {
         System.out.println("[UI] MatchingController recv: " + msg);
 
-        // MATCH 1v1 채채채,채빵
+        // 형식: MATCH 1v1 채채채,채빵
         if (msg.startsWith("MATCH 1v1")) {
-            // (지금은 단순히 매칭 성공 화면으로만 이동)
+            String[] parts = msg.split("\\s+");
+            if (parts.length >= 3) {
+                String mode = parts[1];          // "1v1"
+                String playersPart = parts[2];   // "채채채,채빵"
+
+                String[] players = playersPart.split(",");
+
+                // MatchSession에 저장
+                MatchSession.setMode(mode);
+                MatchSession.setPlayers(players);
+            }
+
+            // 매칭 성공 화면으로 이동
             SceneRouter.go("/fxml/lobby/MatchSuccessView.fxml");
         }
     }
