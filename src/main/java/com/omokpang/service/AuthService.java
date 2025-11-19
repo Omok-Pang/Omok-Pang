@@ -1,27 +1,75 @@
-package com.omokpang.service;
-
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * AuthService
- * 역할: 로그인 및 회원가입 로직 (임시 메모리 기반)
- * 추후 DB 연동 시 이 로직을 교체하면 됨.
+ * 역할: 로그인/회원가입 → PostgreSQL 연동 버전
  */
+package com.omokpang.service;
+
+import com.omokpang.domain.user.User;
+import com.omokpang.repository.DataSourceProvider;
+import java.sql.*;
+import java.time.LocalDateTime;
+
 public class AuthService {
 
-    // 임시로 사용자 정보를 저장하는 Map (DB 대신)
-    private final Map<String, String> users = new HashMap<>();
-
     // 회원가입
-    public boolean signup(String id, String pw) {
-        if (users.containsKey(id)) return false; // 이미 존재
-        users.put(id, pw);
-        return true;
+    public boolean signup(String nickname, String pw) {
+        String sql = "INSERT INTO users (nickname, password) VALUES (?, ?)";
+
+        try (Connection conn = DataSourceProvider.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, nickname);
+            pstmt.setString(2, pw);
+
+            pstmt.executeUpdate();
+            return true;
+
+        } catch (SQLException e) {
+            // UNIQUE(nickname) 충돌 시
+            System.out.println("회원가입 실패: " + e.getMessage());
+            return false;
+        }
     }
 
     // 로그인
-    public boolean login(String id, String pw) {
-        return users.containsKey(id) && users.get(id).equals(pw);
+    public boolean login(String nickname, String pw) {
+        return loginAndGetUser(nickname, pw) != null;
+    }
+
+    // DB에서 유저 전체 정보를 가져오는 로그인 메서드
+    public User loginAndGetUser(String nickname, String pw) {
+        String sql = """
+                SELECT id, nickname, password, wins, losses, points, created_at
+                FROM users
+                WHERE nickname = ? AND password = ?
+                """;
+
+        try (Connection conn = DataSourceProvider.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, nickname);
+            pstmt.setString(2, pw);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (!rs.next()) {
+                    return null; // 아이디/비번 안 맞음
+                }
+
+                int id = rs.getInt("id");
+                String nick = rs.getString("nickname");
+                String storedPw = rs.getString("password");
+                int wins = rs.getInt("wins");
+                int losses = rs.getInt("losses");
+                int points = rs.getInt("points");
+                Timestamp ts = rs.getTimestamp("created_at");
+                LocalDateTime createdAt = ts != null ? ts.toLocalDateTime() : null;
+
+                return new User(id, nick, storedPw, wins, losses, points, createdAt);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

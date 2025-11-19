@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  역할: 본 게임 화면(보드/타이머/유저 아바타/말풍선)
-  - 가운데: 위/아래 아바타 + 오목 보드
-  - 왼쪽: 말풍선(응원 메시지) 선택 패널
-  - 상단: 턴 제한 타이머
-  - 하단: 말풍선 보내기 버튼 + 턴 안내
--->
+
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
@@ -24,26 +18,53 @@
                 -fx-background-repeat: no-repeat;
             ">
 
-    <!-- ================= 중앙 영역: 아바타 + 보드 + 말풍선 선택 패널 ================= -->
+    <!-- ================= 중앙 영역 ================= -->
     <center>
         <StackPane fx:id="centerStack">
 
-            <!-- 세로 배치: 위 유저 / 보드 / 아래 유저 -->
             <VBox alignment="CENTER" spacing="16" fillWidth="false">
 
-                <!-- 위쪽 유저 아바타 (빨간 테두리 하이라이트는 코드에서 style로 설정) -->
-                <StackPane fx:id="topPlayerContainer" alignment="CENTER">
-                    <ImageView fx:id="topPlayerImage"
-                               fitWidth="96"
-                               fitHeight="96"
-                               preserveRatio="true">
-                        <image>
-                            <Image url="/images/user/user1.png"/>
-                        </image>
-                    </ImageView>
+                <!-- 🔼 위쪽 유저: 아바타 + 말풍선 -->
+                <StackPane alignment="CENTER">
+                    <!-- 아바타 -->
+                    <StackPane fx:id="topPlayerContainer" alignment="CENTER">
+                        <ImageView fx:id="topPlayerImage"
+                                   fitWidth="96"
+                                   fitHeight="96"
+                                   preserveRatio="true">
+                            <image>
+                                <Image url="/images/user/user1.png"/>
+                            </image>
+                        </ImageView>
+                    </StackPane>
+
+                    <!-- 위쪽 말풍선 -->
+                    <StackPane fx:id="topMessageBubble"
+                               visible="false"
+                               alignment="CENTER"
+                               translateX="140"
+                               translateY="8">
+                        <ImageView fitWidth="150" preserveRatio="true">
+                            <image>
+                                <Image url="/images/message/ui_message.png"/>
+                            </image>
+                        </ImageView>
+                        <Label fx:id="topMessageLabel"
+                               wrapText="true"
+                               maxWidth="120"
+                               alignment="CENTER"
+                               textAlignment="CENTER"
+                               translateX="2"
+                               translateY="-3"
+                               style="
+                                   -fx-text-fill: white;
+                                   -fx-font-size: 18;
+                                   -fx-font-weight: 800;
+                               "/>
+                    </StackPane>
                 </StackPane>
 
-                <!-- 오목 보드 (360 x 360 고정, 격자는 컨트롤러에서 그린다) -->
+                <!-- 오목 보드 -->
                 <StackPane alignment="CENTER">
                     <Pane fx:id="boardRoot"
                           prefWidth="360" prefHeight="360"
@@ -52,12 +73,9 @@
                           style="-fx-background-color: transparent;"/>
                 </StackPane>
 
-                <!-- 아래쪽 유저: 중앙 아바타 + 오른쪽 말풍선 -->
+                <!-- 🔽 아래쪽 유저: 아바타 + 말풍선 -->
                 <StackPane alignment="CENTER">
-
-                    <!-- 아바타 컨테이너 (항상 가운데에 위치) -->
-                    <StackPane fx:id="bottomPlayerContainer"
-                               alignment="CENTER">
+                    <StackPane fx:id="bottomPlayerContainer" alignment="CENTER">
                         <ImageView fx:id="bottomPlayerImage"
                                    fitWidth="96"
                                    fitHeight="96"
@@ -68,20 +86,16 @@
                         </ImageView>
                     </StackPane>
 
-                    <!-- 내가 보낸 말풍선 (ui_message.png) -->
-                    <!-- translateX/translateY 로 아바타 기준 위치 조정 -->
                     <StackPane fx:id="bottomMessageBubble"
                                visible="false"
                                alignment="CENTER"
                                translateX="140"
                                translateY="-8">
-                        <!-- 말풍선 이미지의 가로 크기: fitWidth -->
                         <ImageView fitWidth="150" preserveRatio="true">
                             <image>
                                 <Image url="/images/message/ui_message.png"/>
                             </image>
                         </ImageView>
-                        <!-- 텍스트: 가운데 정렬, 위치 미세 조정 (translateX/Y) -->
                         <Label fx:id="bottomMessageLabel"
                                wrapText="true"
                                maxWidth="120"
@@ -98,22 +112,49 @@
                 </StackPane>
             </VBox>
 
-            <!-- ================ 왼쪽 말풍선 선택 패널 ================ -->
+            <!-- 왼쪽 유저 (3번 플레이어 자리) -->
+            <StackPane fx:id="leftPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_LEFT">
+                <StackPane.margin>
+                    <Insets left="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="leftPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user3.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- 오른쪽 유저 (4번 플레이어 자리) -->
+            <StackPane fx:id="rightPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_RIGHT">
+                <StackPane.margin>
+                    <Insets right="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="rightPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user4.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- 왼쪽 말풍선 선택 패널 -->
             <StackPane fx:id="messageSelectPane"
                        visible="false"
                        pickOnBounds="false"
                        alignment="TOP_LEFT"
                        StackPane.alignment="TOP_LEFT">
                 <StackPane.margin>
-                    <!-- left 를 조정해서 보드와의 간격(여백)을 튜닝 가능 -->
                     <Insets left="10" top="40"/>
                 </StackPane.margin>
 
-                <!-- 전체 패널 컨테이너 -->
                 <VBox alignment="TOP_CENTER"
                       prefWidth="220" maxWidth="220" spacing="0">
 
-                    <!-- 스크롤 영역: cheer-scroll 클래스는 game-board.css 에서 커스텀 가능 -->
                     <ScrollPane fx:id="messageScroll"
                                 styleClass="cheer-scroll"
                                 prefWidth="220" maxWidth="220"
@@ -126,13 +167,11 @@
                                     -fx-border-color: transparent;
                                 ">
                         <content>
-                            <!-- 실제 말풍선 항목들이 들어가는 VBox -->
                             <VBox fx:id="messageListBox"
                                   spacing="4"
                                   fillWidth="true"
                                   style="-fx-background-color: transparent;">
                                 <padding>
-                                    <!-- 항목 위/아래 여백 -->
                                     <Insets top="10" right="0" bottom="10" left="0"/>
                                 </padding>
                             </VBox>
@@ -144,7 +183,7 @@
         </StackPane>
     </center>
 
-    <!-- ================= 상단: 타이머 영역 ================= -->
+    <!-- 상단 타이머 -->
     <top>
         <HBox spacing="18" alignment="CENTER_RIGHT">
             <padding>
@@ -158,20 +197,16 @@
         </HBox>
     </top>
 
-    <!-- ================= 하단: 말풍선 버튼 + 턴 표시 ================= -->
+    <!-- 하단: 말풍선 버튼 + 턴 표시 + 카드 슬롯 -->
     <bottom>
         <HBox spacing="16" alignment="CENTER_LEFT">
             <padding>
                 <Insets top="10" right="10" bottom="14" left="10"/>
             </padding>
 
-            <!-- 말풍선 패널 열기 버튼 (이미지 버튼) -->
             <Button fx:id="messageButton"
                     onAction="#handleCheer"
-                    style="
-                        -fx-background-color: transparent;
-                        -fx-padding: 0;
-                    ">
+                    style="-fx-background-color: transparent; -fx-padding: 0;">
                 <graphic>
                     <ImageView fitHeight="40" preserveRatio="true">
                         <image>
@@ -181,10 +216,18 @@
                 </graphic>
             </Button>
 
-            <!-- 현재 턴 안내 텍스트 -->
             <Label fx:id="turnLabel"
-                   text="내 턴 (위 유저)"
+                   text="내 턴 (아래 유저)"
                    style="-fx-font-size:18; -fx-font-weight:800; -fx-text-fill:white;"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <HBox fx:id="cardSlotBox"
+                  spacing="8"
+                  alignment="CENTER_RIGHT">
+                <!-- 아이콘들 -->
+            </HBox>
+
         </HBox>
     </bottom>
 

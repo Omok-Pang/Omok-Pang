@@ -134,7 +134,7 @@ public class MainController {
         String mode = (playerCount == 2) ? "1v1" : "1v1v1v1";
         System.out.println("게임 시작: mode=" + mode + ", count=" + playerCount);
 
-        SceneRouter.go("/fxml/game/GameIntroView.fxml");
+        SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 
     /* ==================== 유틸 / 외부에서 값 주입 ==================== */

@@ -7,7 +7,6 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.geometry.*?>
 
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -31,32 +30,41 @@
     </ImageView>
 
     <!-- ====================== 우측 상단 사용자 정보바 ====================== -->
-    <HBox spacing="18" alignment="CENTER_RIGHT"
+    <HBox spacing="14" alignment="CENTER_RIGHT"
           AnchorPane.rightAnchor="20" AnchorPane.topAnchor="25">
 
         <!-- ⭐ 포인트 -->
-        <HBox spacing="5">
-            <Label text="⭐"
-                   style="-fx-text-fill:white; -fx-font-size:18; -fx-font-weight:800;"/>
+        <HBox spacing="5" alignment="CENTER">
+            <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
+                <image>
+                    <Image url="/images/user/ic_star.png"/>
+                </image>
+            </ImageView>
+
             <Label fx:id="labelPoint" text="0"
-                   style="-fx-text-fill:white; -fx-font-size:16; -fx-font-weight:700;"/>
+                   style="-fx-text-fill:white; -fx-font-size:15; -fx-font-weight:700;"/>
         </HBox>
 
         <!-- 👑 승리 -->
-        <HBox spacing="5">
-            <Label text="👑"
-                   style="-fx-text-fill:white; -fx-font-size:18; -fx-font-weight:800;"/>
+        <HBox spacing="5" alignment="CENTER">
+            <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
+                <image>
+                    <Image url="/images/user/ic_crown.png"/>
+                </image>
+            </ImageView>
+
             <Label fx:id="labelWin" text="0"
-                   style="-fx-text-fill:white; -fx-font-size:16; -fx-font-weight:700;"/>
+                   style="-fx-text-fill:white; -fx-font-size:15; -fx-font-weight:700;"/>
         </HBox>
 
         <!-- 프로필 + 닉네임 -->
-        <HBox spacing="6">
+        <HBox spacing="8" alignment="CENTER">
             <ImageView fx:id="imgProfile" fitWidth="28" preserveRatio="true">
                 <image>
-                    <Image url="/images/user/user1.png"/>
+                    <Image url="/images/user/ic_profile.png"/>
                 </image>
             </ImageView>
+
             <Label fx:id="labelUsername" text="닉네임"
                    style="-fx-text-fill:white; -fx-font-size:16; -fx-font-weight:700;"/>
         </HBox>

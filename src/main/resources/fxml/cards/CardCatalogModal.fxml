@@ -37,36 +37,36 @@
 
             <!-- 1행 -->
             <ImageView GridPane.rowIndex="0" GridPane.columnIndex="0" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_Remove.png"/></image>
+                <image><Image url="/images/gamecard/la_Remove.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="0" GridPane.columnIndex="1" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_DoubleMove.png"/></image>
+                <image><Image url="/images/gamecard/la_DoubleMove.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="0" GridPane.columnIndex="2" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_TimeLock.png"/></image>
+                <image><Image url="/images/gamecard/la_TimeLock.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="0" GridPane.columnIndex="3" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_Swap.png"/></image>
+                <image><Image url="/images/gamecard/la_Swap.png"/></image>
             </ImageView>
 
             <!-- 2행 -->
             <ImageView GridPane.rowIndex="1" GridPane.columnIndex="0" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_Defense.png"/></image>
+                <image><Image url="/images/gamecard/la_Defense.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="1" GridPane.columnIndex="1" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_Shield.png"/></image>
+                <image><Image url="/images/gamecard/la_Shield.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="1" GridPane.columnIndex="2" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_SharedStone.png"/></image>
+                <image><Image url="/images/gamecard/la_SharedStone.png"/></image>
             </ImageView>
 
             <ImageView GridPane.rowIndex="1" GridPane.columnIndex="3" fitWidth="150" preserveRatio="true">
-                <image><Image url="/images/cards/la_Bomb.png"/></image>
+                <image><Image url="/images/gamecard/la_Bomb.png"/></image>
             </ImageView>
 
         </GridPane>

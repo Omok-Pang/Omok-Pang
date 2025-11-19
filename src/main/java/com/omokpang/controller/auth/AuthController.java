@@ -5,12 +5,19 @@
 
 package com.omokpang.controller.auth;
 
+import com.omokpang.domain.user.User;
+import com.omokpang.controller.main.MainController;
 import com.omokpang.service.AuthService;
+import com.omokpang.session.AppSession;
+import com.omokpang.net.OmokClient;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import java.io.IOException;
 
@@ -23,6 +30,7 @@ public class AuthController {
     @FXML private TextField loginIdField;
     @FXML private PasswordField loginPwField;
     @FXML private Label loginMsgLabel;
+    @FXML private Button loginButton;
 
     // 회원가입 탭
     @FXML private TextField signupIdField;
@@ -33,9 +41,16 @@ public class AuthController {
 
     private final AuthService authService = new AuthService();
 
+    private Image loginDefaultImg;
+    private Image loginActiveImg;
+    private Image signupDefaultImg;
+    private Image signupActiveImg;
+
     // 초기화: 회원가입 버튼 비활성 + 실시간 유효성 검사
     @FXML
     private void initialize() {
+        initButtonImages();
+
         if (signupButton != null) signupButton.setDisable(true);
 
         // 실시간 유효성 검사 → 조건 만족 시 버튼 활성화
@@ -44,6 +59,14 @@ public class AuthController {
             signupPwField.textProperty().addListener((obs, o, n) -> validateSignupInputs());
             signupPwConfirmField.textProperty().addListener((obs, o, n) -> validateSignupInputs());
         }
+
+        if (loginIdField != null && loginPwField != null) {
+            loginIdField.textProperty().addListener((obs, o, n) -> validateLoginInputs());
+            loginPwField.textProperty().addListener((obs, o, n) -> validateLoginInputs());
+        }
+
+        validateSignupInputs();
+        validateLoginInputs();
     }
 
     // ---------- 로그인 ----------
@@ -57,10 +80,13 @@ public class AuthController {
             return;
         }
 
-        boolean ok = authService.login(id, pw);
-        if (ok) {
+        // ✅ 로그인 + 유저 정보 가져오기
+        User user = authService.loginAndGetUser(id, pw);
+        if (user != null) {
+            AppSession.setCurrentUser(user);
+
             loginMsgLabel.setText("");
-            goToMainView();
+            goToMainView(user);   // User를 들고 메인 화면으로
         } else {
             showLoginError("잘못된 닉네임 또는 비밀번호입니다.");
         }
@@ -129,8 +155,10 @@ public class AuthController {
         boolean pwOk = pw.matches("\\d{4}");
         boolean confirmOk = pw.equals(confirm) && !confirm.isEmpty();
 
-        signupButton.setDisable(!(idOk && pwOk && confirmOk));
-        // 안내 메시지는 눌렀을 때만 띄우도록 유지 (과도한 경고 방지)
+        boolean ready = idOk && pwOk && confirmOk;
+
+        signupButton.setDisable(!ready);
+        updateSignupButtonGraphic(ready);
     }
 
     private void showLoginError(String msg) {
@@ -147,14 +175,73 @@ public class AuthController {
         return c == null || c.getText() == null ? "" : c.getText().trim();
     }
 
-    private void goToMainView() {
+    // ---------- 버튼 이미지 로딩 ----------
+
+    private void initButtonImages() {
         try {
+            loginDefaultImg = new Image(
+                    getClass().getResourceAsStream("/images/login/loginBf_startBt.png"));
+            loginActiveImg = new Image(
+                    getClass().getResourceAsStream("/images/login/loginBf_startBt_success.png"));
+
+            signupDefaultImg = new Image(
+                    getClass().getResourceAsStream("/images/login/loginAf_finishBt.png"));
+            signupActiveImg = new Image(
+                    getClass().getResourceAsStream("/images/login/loginAf_finishBt_success.png"));
+        } catch (Exception e) {
+            // 이미지 못 불러와도 기능은 그대로 돌아가도록 조용히 무시
+            e.printStackTrace();
+        }
+    }
+
+    // ---------- 로그인 입력 유효성 & 버튼 그래픽 ----------
+
+    private void validateLoginInputs() {
+        if (loginButton == null) return;
+
+        String id = safeText(loginIdField);
+        String pw = safeText(loginPwField);
+
+        boolean ready = !id.isEmpty() && !pw.isEmpty(); // 둘 다 있으면 “준비됨”
+
+        updateLoginButtonGraphic(ready);
+    }
+
+    private void updateLoginButtonGraphic(boolean active) {
+        if (loginButton == null) return;
+        if (loginDefaultImg == null || loginActiveImg == null) return;
+
+        if (loginButton.getGraphic() instanceof ImageView iv) {
+            iv.setImage(active ? loginActiveImg : loginDefaultImg);
+        }
+    }
+
+    private void updateSignupButtonGraphic(boolean active) {
+        if (signupButton == null) return;
+        if (signupDefaultImg == null || signupActiveImg == null) return;
+
+        if (signupButton.getGraphic() instanceof ImageView iv) {
+            iv.setImage(active ? signupActiveImg : signupDefaultImg);
+        }
+    }
+
+    private void goToMainView(User user) {
+        try {
+            // ✅ 1) 서버 연결 (이미 연결된 상태면 내부에서 그냥 리턴)
+            OmokClient client = OmokClient.getInstance();
+            if (!client.isConnected()) {
+                client.connect("127.0.0.1", 9000); // 서버 IP/포트
+                // 로그인 직후 서버에 내 닉네임 알려주기
+                client.send("LOGIN " + user.getNickname());
+            }
+
+            // ✅ 2) 기존 MainView 전환 로직 그대로 유지
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
             Parent mainRoot = loader.load();
 
-            // ✅ 로그인한 닉네임 전달
-            com.omokpang.controller.main.MainController controller = loader.getController();
-            //controller.setUsername(loginIdField.getText());
+            MainController controller = loader.getController();
+            controller.setUserInfo(user.getNickname(), "/images/user/ic_profile.png");
+            controller.setStats(user.getPoints(), user.getWins());
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
             stage.setScene(new Scene(mainRoot));
@@ -163,6 +250,9 @@ public class AuthController {
         } catch (IOException e) {
             e.printStackTrace();
             loginMsgLabel.setText("화면 전환 오류 발생");
+        } catch (Exception e) {
+            e.printStackTrace();
+            loginMsgLabel.setText("서버 접속 오류 발생");
         }
     }
 
