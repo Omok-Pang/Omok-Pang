@@ -23,6 +23,12 @@ import javafx.util.Duration;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * 역할: 실제 오목판 화면.
+ *  - 위/아래(좌/우) 플레이어 아바타 표시
+ *  - MatchSession에서 아바타/닉네임/카드 정보를 가져와 배치
+ *  - 돌 두기 / 턴 전환 / 타이머 / 말풍선 / 카드 효과 처리
+ */
 public class GameBoardController {
 
     // ====== 외부에서 연결할 인터페이스(응원 메시지 전송용) ======
@@ -31,7 +37,8 @@ public class GameBoardController {
         void sendCheer(String message);
     }
 
-    private CheerSender cheerSender;  // WebSocket 등으로 실제 전송하는 쪽
+    /** 말풍선 텍스트를 서버로 보내는 실제 구현체 (NetworkClient 래핑) */
+    private CheerSender cheerSender;
 
     public void setCheerSender(CheerSender cheerSender) {
         this.cheerSender = cheerSender;
@@ -39,11 +46,21 @@ public class GameBoardController {
 
     // 1:1 여부 / 내가 아래인지 여부
     private boolean oneVsOne = true;
-    private boolean meIsBottom = true;   // true: 나는 아래, false: 나는 위
+    private boolean meIsBottom = true;   // true: 나는 아래, false: 나는 위 (현재는 항상 true)
 
-    // 🔥 프로필별 돌 이미지 경로
+    // 프로필별 기본 돌 이미지 경로 (fallback 용)
     private String topStonePath = "/images/user/sm_user1.png";
     private String bottomStonePath = "/images/user/sm_user2.png";
+
+    // ---- 내/상대 턴 정보 (1 = 선공, -1 = 후공) ----
+    /** 나는 선공(1)인지 후공(-1)인지 */
+    private int mySign = 1;
+    /** 상대는 항상 나의 반대 */
+    private int opponentSign = -1;
+
+    // 내 돌 / 상대 돌 이미지 경로 (sm_ 아이콘)
+    private String myStonePath;
+    private String opponentStonePath;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -131,16 +148,21 @@ public class GameBoardController {
     private boolean swapSelecting = false;
 
     // ================== 외부에서 플레이어 배치 설정 ==================
-    public void configureForOneVsOne(boolean meIsBottom) {
+    /**
+     * 1:1 모드 레이아웃 설정.
+     * 현재는 항상 "나는 아래" 로 고정.
+     */
+    public void configureForOneVsOne(boolean ignore) {
         this.oneVsOne = true;
-        this.meIsBottom = meIsBottom;
+        this.meIsBottom = true;
+
         applyLayoutConfig();
         updateTurnLabel();
         updateActivePlayerHighlight();
     }
 
+    /** 1:1일 때 좌/우 아바타 숨기기 */
     private void applyLayoutConfig() {
-        // 1:1 이면 좌우 프로필 숨기기
         boolean sideVisible = !oneVsOne;
 
         if (leftPlayerContainer != null) {
@@ -156,7 +178,7 @@ public class GameBoardController {
     // ================== 초기화 ==================
     @FXML
     public void initialize() {
-        // 아바타 컨테이너가 가로로 쭉 늘어지지 않도록
+        // 아바타 컨테이너가 가로로 쭉 늘어지지 않도록 프리사이즈 유지
         bottomPlayerContainer.setMaxWidth(Region.USE_PREF_SIZE);
         bottomPlayerContainer.setMaxHeight(Region.USE_PREF_SIZE);
         topPlayerContainer.setMaxWidth(Region.USE_PREF_SIZE);
@@ -179,24 +201,24 @@ public class GameBoardController {
         // 기본은 1:1 + 나는 아래라고 가정
         applyLayoutConfig();
 
-        // 🔥 MatchSession에서 아바타 정보 읽어서 프로필/돌 세팅
+        // 🔥 MatchSession에서 아바타/닉네임 정보 읽어서 프로필 & 돌 세팅
         initAvatarsFromSession();
 
-        // 🔥 여기서 내가 선택한 카드 두 장 세팅
+        // 🔥 선택한 카드 두 장 세팅 (있을 경우)
         List<Card> myCards = MatchSession.getMySelectedCards();
         if (myCards != null && !myCards.isEmpty()) {
             setReceivedCards(myCards);
         }
 
-        // 보드 그리기
+        // 보드 그리기 (격자)
         boardRoot.setPrefSize(SIZE, SIZE);
         drawGrid();
 
-        // 보드 클릭
+        // 보드 클릭 이벤트 등록
         boardRoot.setOnMouseClicked(e -> {
             int c = (int) Math.round(e.getX() / CELL);
             int r = (int) Math.round(e.getY() / CELL);
-            place(r, c);
+            handleLocalClick(r, c);
         });
 
         // 말풍선 리스트, 턴 정보, 타이머 시작
@@ -207,9 +229,10 @@ public class GameBoardController {
     }
 
     /**
-     * MatchSuccess에서 저장해둔 아바타 정보를 이용해
+     * MatchSuccess / 카드 선택 화면에서 저장해둔 아바타 정보를 이용해
      * - top / bottom 프로필 이미지
-     * - topStonePath / bottomStonePath
+     * - 선공/후공(mySign)
+     * - 내 돌 / 상대 돌 이미지 경로
      * 를 세팅한다.
      */
     private void initAvatarsFromSession() {
@@ -217,28 +240,13 @@ public class GameBoardController {
         String me = MatchSession.getMyNickname();
         String[] avatars = MatchSession.getPlayerAvatars();
 
-        if (players == null || avatars == null || players.length < 2) {
+        if (players == null || avatars == null || players.length < 2 || me == null) {
             // 세션 정보가 없으면 FXML 기본 이미지 + 기본 돌 사용
+            System.out.println("[GameBoard] WARN: MatchSession info missing.");
             return;
         }
 
-        // 현재는 1:1 기준: players[0] → 위, players[1] → 아래
-        String topAvatar = avatars[0];
-        String bottomAvatar = avatars[1];
-
-        // 프로필 이미지 적용
-        topPlayerImage.setImage(
-                new Image(getClass().getResource(topAvatar).toExternalForm())
-        );
-        bottomPlayerImage.setImage(
-                new Image(getClass().getResource(bottomAvatar).toExternalForm())
-        );
-
-        // 프로필에 맞는 돌 이미지 경로 세팅
-        topStonePath = toStonePath(topAvatar);       // user1.png → sm_user1.png
-        bottomStonePath = toStonePath(bottomAvatar); // user2.png → sm_user2.png
-
-        // 내 위치(위/아래) 계산: players 배열에서 내 닉네임 위치 찾기
+        // 1) 내 인덱스 / 상대 인덱스 찾기
         int myIndex = 0;
         for (int i = 0; i < players.length; i++) {
             if (players[i].equals(me)) {
@@ -246,18 +254,67 @@ public class GameBoardController {
                 break;
             }
         }
-        // 1:1 기준으로 index 0=위, 1=아래
-        meIsBottom = (myIndex == 1);
+        int oppIndex = (myIndex == 0) ? 1 : 0;
+
+        // 2) 선공/후공 결정: players[0] 이 선공이라고 가정
+        boolean iAmFirst = players[0].equals(me);
+        mySign = iAmFirst ? 1 : -1;
+        opponentSign = -mySign;
+
+        // 3) 아바타 경로
+        String myAvatarPath  = avatars[myIndex];
+        String oppAvatarPath = avatars[oppIndex];
+
+        // 4) 화면 배치: "항상 내 프로필이 아래!"
+        bottomPlayerImage.setImage(
+                new Image(getClass().getResource(myAvatarPath).toExternalForm())
+        );
+        topPlayerImage.setImage(
+                new Image(getClass().getResource(oppAvatarPath).toExternalForm())
+        );
+
+        // 5) 돌 이미지 경로도 내 것 / 상대 것으로 분리 (sm_ 버전으로 변환)
+        myStonePath = toStonePath(myAvatarPath);
+        opponentStonePath = toStonePath(oppAvatarPath);
+
+        // 혹시 다른 코드에서 top/bottomStonePath 를 쓰고 있을 수 있으니 맞춰 둠
+        bottomStonePath = myStonePath;
+        topStonePath = opponentStonePath;
     }
 
     /**
-     * "/images/user/user1.png" → "/images/user/sm_user1.png" 으로 바꿔주는 헬퍼.
+     * 아바타 이미지 경로("/images/user/user1.png")를
+     * 돌 이미지 경로("/images/user/sm_user1.png")로 변환한다.
      */
     private String toStonePath(String avatarPath) {
-        if (avatarPath == null) return "/images/user/sm_user1.png";
-        // 파일명이 user1.png, user2.png ... 라고 가정
-        // "/images/user/user1.png".replace("user", "sm_user") → "/images/user/sm_user1.png"
-        return avatarPath.replace("/user", "/sm_user");
+        // avatarPath 예시: "/images/user/user1.png" 또는 "/images/user/sm_user1.png"
+        if (avatarPath == null || avatarPath.isBlank()) {
+            return "/images/user/sm_user1.png";
+        }
+
+        // 이미 sm_ 버전이면 그대로 사용
+        if (avatarPath.contains("sm_user")) {
+            return avatarPath;
+        }
+
+        int lastSlash = avatarPath.lastIndexOf('/');
+        if (lastSlash < 0) {
+            // 혹시 "user1.png" 처럼 파일명만 들어온 경우
+            String file = avatarPath;
+            if (!file.startsWith("sm_")) {
+                file = "sm_" + file;           // user1.png -> sm_user1.png
+            }
+            return "/images/user/" + file;
+        }
+
+        String dir = avatarPath.substring(0, lastSlash + 1);  // "/images/user/"
+        String file = avatarPath.substring(lastSlash + 1);    // "user1.png" 또는 "sm_user1.png"
+
+        if (!file.startsWith("sm_")) {
+            file = "sm_" + file;           // user1.png -> sm_user1.png
+        }
+
+        return dir + file;                 // "/images/user/sm_user1.png"
     }
 
     // ================== 말풍선 리스트 UI 구성 ==================
@@ -295,6 +352,7 @@ public class GameBoardController {
     }
 
     // ================== 보드 그리기 및 돌 놓기 ==================
+    /** 격자 그리기 */
     private void drawGrid() {
         boardRoot.getChildren().clear();
 
@@ -319,18 +377,53 @@ public class GameBoardController {
         boardRoot.getChildren().addAll(b1, b2, b3, b4);
     }
 
-    private void place(int r, int c) {
-        if (!isInside(r, c) || board[r][c] != 0) return;
+    /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
+    private void handleLocalClick(int r, int c) {
+        // ✅ 내 턴인지: current 가 mySign(1 or -1) 과 같은지만 본다
+        boolean myTurn = (current == mySign);
 
+        if (!myTurn) {
+            return; // 내 턴 아니면 무시
+        }
+
+        if (!isInside(r, c) || board[r][c] != 0) {
+            return; // 범위 밖 / 이미 돌이 있는 자리
+        }
+
+        // 실제로 돌 놓기 (공통)
+        applyPlace(r, c);
+
+        // 서버에 전송
+        if (networkClient != null) {
+            networkClient.sendPlace(r, c);
+        }
+    }
+
+    /** 상대방으로부터 온 PLACE r c 처리 */
+    public void onPlaceFromOpponent(int r, int c) {
+        if (!isInside(r, c) || board[r][c] != 0) {
+            return;
+        }
+        applyPlace(r, c);
+    }
+
+    /** 실제 돌 그리기 + 턴 전환 공통 로직 */
+    private void applyPlace(int r, int c) {
         double cx = c * CELL;
         double cy = r * CELL;
 
-        // 🔥 유저별 돌 이미지 경로 (프로필에 매칭된 돌 사용)
-        String stonePath = (current == 1)   // 1 = 위 플레이어
-                ? topStonePath
-                : bottomStonePath;
+        // 지금 두는 사람이 나인지 / 상대인지에 따라 돌 이미지 선택
+        String stonePath = (current == mySign) ? myStonePath : opponentStonePath;
 
-        Image img = new Image(getClass().getResource(stonePath).toExternalForm());
+        // 🔥 안전장치: 경로가 잘못되면 기본 돌로 대체 (NPE 방지)
+        java.net.URL url = getClass().getResource(stonePath);
+        if (url == null) {
+            System.out.println("[GameBoard] WARN: stone image not found: " + stonePath +
+                    " -> fallback to /images/user/sm_user1.png");
+            url = getClass().getResource("/images/user/sm_user1.png");
+        }
+
+        Image img = new Image(url.toExternalForm());
         ImageView stone = new ImageView(img);
 
         double stoneSize = CELL * 0.9;
@@ -344,8 +437,9 @@ public class GameBoardController {
         boardRoot.getChildren().add(stone);
         board[r][c] = current;
 
-        // TODO: 승리 조건 검사 / 서버 전송
+        // TODO: 승리 조건 검사
 
+        // 턴 전환
         current *= -1;
         updateTurnLabel();
         updateActivePlayerHighlight();
@@ -357,6 +451,7 @@ public class GameBoardController {
     }
 
     // ================== 아바타 하이라이트 / 턴 텍스트 ==================
+    /** 위/아래 아바타 테두리로 현재 턴 강조 */
     private void updateActivePlayerHighlight() {
         String activeStyle =
                 "-fx-padding: 6;" +
@@ -372,36 +467,26 @@ public class GameBoardController {
                         "-fx-border-width: 4;" +
                         "-fx-border-radius: 999;";
 
-        // current == 1 : 위 플레이어 턴
-        boolean topTurn = (current == 1);
+        boolean myTurn = (current == mySign);
 
-        if (topTurn) {
+        if (myTurn) {
+            // ✅ 내 턴이면 아래(나)를 강조
+            bottomPlayerContainer.setStyle(activeStyle);
+            topPlayerContainer.setStyle(inactiveStyle);
+        } else {
             topPlayerContainer.setStyle(activeStyle);
             bottomPlayerContainer.setStyle(inactiveStyle);
-        } else {
-            topPlayerContainer.setStyle(inactiveStyle);
-            bottomPlayerContainer.setStyle(activeStyle);
         }
     }
 
+    /** 상단 텍스트로 "내 턴 / 상대 턴" 표시 */
     private void updateTurnLabel() {
-        // current == 1 : 위 플레이어 턴
-        boolean topTurn = (current == 1);
+        boolean myTurn = (current == mySign);
 
-        if (meIsBottom) {
-            // 나는 아래
-            if (topTurn) {
-                turnLabel.setText("상대 턴 (위 유저)");
-            } else {
-                turnLabel.setText("내 턴 (아래 유저)");
-            }
+        if (myTurn) {
+            turnLabel.setText("내 턴 (아래 유저)");
         } else {
-            // 나는 위
-            if (topTurn) {
-                turnLabel.setText("내 턴 (위 유저)");
-            } else {
-                turnLabel.setText("상대 턴 (아래 유저)");
-            }
+            turnLabel.setText("상대 턴 (위 유저)");
         }
     }
 
@@ -448,6 +533,7 @@ public class GameBoardController {
         messageSelectPane.setVisible(!nowVisible);
     }
 
+    /** 내 말풍선 전송 */
     private void sendBalloon(String text) {
         messageSelectPane.setVisible(false);
         showMyBalloon(text);
@@ -458,19 +544,14 @@ public class GameBoardController {
     }
 
     private void showMyBalloon(String text) {
-        if (meIsBottom) {
-            showBalloonOn(bottomMessageBubble, bottomMessageLabel, text);
-        } else {
-            showBalloonOn(topMessageBubble, topMessageLabel, text);
-        }
+        // ✅ 나는 항상 아래
+        showBalloonOn(bottomMessageBubble, bottomMessageLabel, text);
     }
 
+    /** 상대방 말풍선 수신 */
     public void onCheerReceivedFromOpponent(String text) {
-        if (meIsBottom) {
-            showBalloonOn(topMessageBubble, topMessageLabel, text);
-        } else {
-            showBalloonOn(bottomMessageBubble, bottomMessageLabel, text);
-        }
+        // ✅ 상대는 항상 위
+        showBalloonOn(topMessageBubble, topMessageLabel, text);
     }
 
     private void showBalloonOn(StackPane bubble, Label label, String text) {
@@ -482,8 +563,7 @@ public class GameBoardController {
         hide.play();
     }
 
-    // ================== 카드 선택 모달 / TimeLock / Swap / 카드 슬롯 (기존 그대로) ==================
-    // ... (여기부터는 네가 줬던 코드 그대로 두면 돼, 위에서 바꾼 부분은 돌/아바타 관련만이야) ...
+    // ================== 카드 선택 모달 / TimeLock / Swap / 카드 슬롯 ==================
     /**
      * 카드 선택 화면에서 받은 카드 2장을 GameBoard에 표시하는 메서드.
      * - MatchSession에서 가져온 카드들을 UI 슬롯에 채운다.
@@ -510,5 +590,20 @@ public class GameBoardController {
 
             cardSlotBox.getChildren().add(iv);
         }
+    }
+
+    // ================== 네트워크 바인딩 ==================
+    public interface NetworkClient {
+        void sendCheer(String msg);
+        void sendPlace(int row, int col);
+    }
+
+    private NetworkClient networkClient;
+
+    /** GameIntroController에서 OmokClient와 연결해줄 때 호출 */
+    public void bindNetwork(NetworkClient client) {
+        this.networkClient = client;
+        // 말풍선용 래핑 (기존 cheerSender 그대로 사용)
+        this.cheerSender = client::sendCheer;
     }
 }
