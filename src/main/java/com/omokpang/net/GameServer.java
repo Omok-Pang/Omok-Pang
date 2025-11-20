@@ -23,6 +23,9 @@ public class GameServer {
     // 1:1 매칭 대기열 (닉네임만 저장)
     private static final Queue<String> queue1v1 = new ArrayDeque<>();
 
+    // 🔥 매칭된 상대 매핑 (양방향)
+    private static final Map<String, String> opponentMap = new ConcurrentHashMap<>();
+
     public static void main(String[] args) throws Exception {
         int port = 9000;
         System.out.println("[SERVER] OmokPang Server start on port " + port);
@@ -38,14 +41,56 @@ public class GameServer {
         }
     }
 
+    // 말풍선 전송: from → 그의 상대에게만
+    private static void forwardCheer(String from, String text) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("CHEER " + text);
+        }
+    }
+
+    // 돌 두기 전송: from → 그의 상대에게만
+    private static void forwardPlace(String from, int r, int c) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("PLACE " + r + " " + c);
+        }
+    }
+
+    // SharedStone 시작 알림: from -> 그의 상대에게만
+    private static void forwardSharedStoneStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SHARED_STONE_START");
+        }
+    }
+
+    // SharedStone 타겟 좌표 전달: from -> 그의 상대에게만
+    private static void forwardSharedStoneTarget(String from, int r, int c) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SHARED_STONE_TARGET " + r + " " + c);
+        }
+    }
+
     private static void handleClient(Socket socket) {
         String nickname = null;
 
-        try (
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(socket.getInputStream())
-                );
-                PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
+        try (BufferedReader in = new BufferedReader(
+                new InputStreamReader(socket.getInputStream()));
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true)
         ) {
             out.println("WELCOME OmokPang!");
 
@@ -53,9 +98,6 @@ public class GameServer {
             while ((line = in.readLine()) != null) {
                 System.out.println("[SERVER] recv: " + line);
 
-                // --------------------
-                //  LOGIN 처리
-                // --------------------
                 if (line.startsWith("LOGIN ")) {
                     nickname = line.substring("LOGIN ".length()).trim();
                     clientMap.put(nickname, out);
@@ -63,15 +105,54 @@ public class GameServer {
                     continue;
                 }
 
-                // --------------------
-                //  QUEUE 1v1 처리
-                //  형식: QUEUE 1v1 닉네임
-                // --------------------
                 if (line.startsWith("QUEUE 1v1")) {
                     String[] parts = line.split("\\s+", 3);
                     if (parts.length >= 3) {
                         String nick = parts[2].trim();
                         enqueue1v1(nick);
+                    }
+                    continue;
+                }
+
+                // 🔥 말풍선: CHEER <text...>
+                if (line.startsWith("CHEER ")) {
+                    if (nickname != null) {
+                        String text = line.substring("CHEER ".length());
+                        forwardCheer(nickname, text);
+                    }
+                    continue;
+                }
+
+                // 🔥 돌 두기: PLACE r c   (예: PLACE 7 8)
+                if (line.startsWith("PLACE ")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            int r = Integer.parseInt(parts[1]);
+                            int c = Integer.parseInt(parts[2]);
+                            forwardPlace(nickname, r, c);
+                        }
+                    }
+                    continue;
+                }
+
+                // 🔥 SharedStone 시작: SHARED_STONE_START
+                if (line.startsWith("SHARED_STONE_START")) {
+                    if (nickname != null) {
+                        forwardSharedStoneStart(nickname);
+                    }
+                    continue;
+                }
+
+                // 🔥 SharedStone 타겟: SHARED_STONE_TARGET r c
+                if (line.startsWith("SHARED_STONE_TARGET")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            int r = Integer.parseInt(parts[1]);
+                            int c = Integer.parseInt(parts[2]);
+                            forwardSharedStoneTarget(nickname, r, c);
+                        }
                     }
                     continue;
                 }
@@ -82,16 +163,15 @@ public class GameServer {
         } catch (Exception e) {
             System.out.println("[SERVER] client disconnected: " + socket);
         } finally {
-            // 연결 종료 시 맵에서 제거
             if (nickname != null) {
                 clientMap.remove(nickname);
+                opponentMap.remove(nickname);
             }
         }
     }
 
     // 1:1 대기열에 넣고, 2명 모이면 MATCH 보내기
     private static synchronized void enqueue1v1(String nick) {
-        // 이미 대기열에 있는지 간단히 체크
         if (queue1v1.contains(nick)) {
             return;
         }
@@ -100,7 +180,6 @@ public class GameServer {
         System.out.println("[SERVER] QUEUE 1v1: " + nick +
                 " (현재 대기: " + queue1v1.size() + ")");
 
-        // 두 명 이상 모이면 매칭
         if (queue1v1.size() >= 2) {
             String a = queue1v1.poll();
             String b = queue1v1.poll();
@@ -113,6 +192,10 @@ public class GameServer {
                 outA.println(matchMsg);
                 outB.println(matchMsg);
                 System.out.println("[SERVER] MATCHED 1v1: " + matchMsg);
+
+                // 🔥 서로의 상대를 등록 (양방향)
+                opponentMap.put(a, b);
+                opponentMap.put(b, a);
             }
         }
     }

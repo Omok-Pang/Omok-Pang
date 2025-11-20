@@ -1,21 +1,23 @@
-/** ResultController
- * 역할: 게임 종료 결과 화면.
- * 핵심기능: 순위·포인트 표시 / 다시하기(매칭) / 나가기(메인) 전환.
- */
-
 package com.omokpang.controller.result;
 
+import com.omokpang.SceneRouter;
+import com.omokpang.domain.user.User;
+import com.omokpang.session.AppSession;
+import com.omokpang.service.ResultService;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
-import javafx.application.Platform;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-
+import java.net.URL;
 
 public class ResultController {
 
@@ -31,71 +33,126 @@ public class ResultController {
     @FXML
     private ImageView retryImg, exitImg;
 
+    @FXML
+    private Button retryBtn, exitBtn;
+
+    // 배너 이미지
     private Image winBanner;
     private Image loseBanner;
 
+    // 순위 뱃지 & 별 아이콘
     private Image rank1Img, rank2Img, rank3Img, rank4Img;
     private Image starImg;
 
+    // 서비스 (싱글톤)
+    private final ResultService resultService = ResultService.getInstance();
+
+    /* ---------- 공통 이미지 로더 ---------- */
+    private Image loadImage(String path) {
+        URL url = getClass().getResource(path);
+        if (url == null) {
+            System.out.println("[ResultController] WARN: image not found: " + path);
+            return null;
+        }
+        return new Image(url.toExternalForm());
+    }
+
     @FXML
     public void initialize() {
-
-        // WIN / LOSE
-        winBanner  = new Image(getClass().getResource("/images/result/youwin.png").toExternalForm());
-        loseBanner = new Image(getClass().getResource("/images/result/youlose.png").toExternalForm());
+        // WIN / LOSE 배너
+        winBanner  = loadImage("/images/result/youwin.png");
+        loseBanner = loadImage("/images/result/youlose.png");
 
         // 버튼 이미지
-        retryImg.setImage(new Image(getClass().getResource("/images/button/restart_btn.png").toExternalForm()));
-        exitImg.setImage(new Image(getClass().getResource("/images/button/exit_btn.png").toExternalForm()));
+        retryImg.setImage(loadImage("/images/button/restart_btn.png"));
+        exitImg.setImage(loadImage("/images/button/exit_btn.png"));
 
-        // 순위 이미지
-        rank1Img = new Image(getClass().getResource("/images/result/rank1.png").toExternalForm());
-        rank2Img = new Image(getClass().getResource("/images/result/rank2.png").toExternalForm());
-        rank3Img = new Image(getClass().getResource("/images/result/rank3.png").toExternalForm());
-        rank4Img = new Image(getClass().getResource("/images/result/rank4.png").toExternalForm());
+        // 순위 뱃지
+        rank1Img = loadImage("/images/result/rank1.png");
+        rank2Img = loadImage("/images/result/rank2.png");
+        rank3Img = loadImage("/images/result/rank3.png");
+        rank4Img = loadImage("/images/result/rank4.png");
 
         // 별 이미지
-        starImg = new Image(getClass().getResource("/images/result/star.png").toExternalForm());
+        starImg = loadImage("/images/result/star.png");
 
-        // 테스트 데이터
-        boolean isWin = false;
-        String[][] ranking = {
-                {"1", "비장한 얼룩말", "80", "/images/user/user2.png"},
-                {"2", "채채채", "60", "/images/user/user3.png"},
-                {"3", "유저2", "40", "/images/user/user2.png"},
-                {"4", "user4", "20", "/images/user/user4.png"},
-        };
-
-        setResultBanner(isWin);
-        loadRanking(ranking);
-
+        // (단독 Scene으로 띄우는 경우를 대비해서) 창 크기 고정
         Platform.runLater(() -> {
-            Stage stage = (Stage) resultBox.getScene().getWindow();
-            stage.setWidth(750);
-            stage.setHeight(600);
+            if (resultBox.getScene() != null &&
+                    resultBox.getScene().getWindow() instanceof Stage stage) {
+                stage.setWidth(750);
+                stage.setHeight(600);
+            }
         });
 
+        // 버튼 동작
+        retryBtn.setOnAction(e ->
+                SceneRouter.go("/fxml/lobby/MatchingView.fxml")
+        );
+        exitBtn.setOnAction(e ->
+                SceneRouter.go("/fxml/main/MainView.fxml")
+        );
     }
 
+    /**
+     * GameBoardController 에서 호출:
+     * @param isWin   이 클라이언트가 이겼는지 여부
+     * @param players [ [순위, 닉네임, 이번 판 포인트(80/40), 아바타경로], ... ]
+     */
+    public void showResult(boolean isWin, String[][] players) {
+        setResultBanner(isWin);
+        loadRanking(players);
 
+        // ==============================
+        // 1) 현재 로그인 유저 정보
+        // ==============================
+        User me = AppSession.getCurrentUser();
+        if (me == null || players == null || players.length == 0) {
+            return;
+        }
+
+        String myNick        = me.getNickname();
+        String firstRankNick = players[0][1];   // 1등 닉네임
+
+        // ==============================
+        // 2) "1등인 클라이언트"만 DB 업데이트
+        //    → 한 판당 딱 1번만 UPDATE 실행
+        // ==============================
+        if (myNick.equals(firstRankNick)) {
+            System.out.println("[ResultController] I am rank1, updating DB...");
+            resultService.applyGameResult(players);  // 두 사람 모두 DB 반영
+        } else {
+            System.out.println("[ResultController] Not rank1, skip DB update.");
+        }
+
+        // ==============================
+        // 3) 각 클라이언트의 AppSession 은
+        //    자기 닉네임에 해당하는 값만 메모리에서 갱신
+        // ==============================
+        applyResultToSession(players);
+    }
+
+    /* ---------- 배너 ---------- */
     private void setResultBanner(boolean isWin) {
-        resultBannerImg.setImage(isWin ? winBanner : loseBanner);
+        Image img = isWin ? winBanner : loseBanner;
+        if (img != null) {
+            resultBannerImg.setImage(img);
+        }
     }
 
-
-    // ⭐⭐⭐ Photo UI 완전 동일하게 구현 ⭐⭐⭐
+    /* ---------- 순위/점수 리스트 UI ---------- */
     private void loadRanking(String[][] players) {
-
         rankingBox.getChildren().clear();
+
+        if (players == null) return;
 
         for (String[] p : players) {
 
-            String rankNum = p[0];
-            String name = p[1];
-            String score = p[2];
+            String rankNum    = p[0];
+            String name       = p[1];
+            String score      = p[2];
             String avatarPath = p[3];
 
-            // 회색 박스 (사진과 동일)
             HBox row = new HBox(20);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPadding(new Insets(15));
@@ -105,52 +162,88 @@ public class ResultController {
                             "-fx-background-radius: 25;"
             );
 
-            // ✔ 1) 순위 이미지
+            // 1) 순위 뱃지
             ImageView rankBadge = new ImageView();
             rankBadge.setFitWidth(55);
             rankBadge.setFitHeight(55);
-
             switch (rankNum) {
                 case "1": rankBadge.setImage(rank1Img); break;
                 case "2": rankBadge.setImage(rank2Img); break;
                 case "3": rankBadge.setImage(rank3Img); break;
                 case "4": rankBadge.setImage(rank4Img); break;
+                default : rankBadge.setImage(rank4Img);
             }
 
-            // ✔ 2) 유저 행성 이미지
-            ImageView avatar = new ImageView(new Image(getClass().getResource(avatarPath).toExternalForm()));
+            // 2) 아바타
+            ImageView avatar = new ImageView();
+            Image avatarImg = loadImage(avatarPath);
+            if (avatarImg != null) avatar.setImage(avatarImg);
             avatar.setFitWidth(55);
             avatar.setFitHeight(55);
 
-            // ✔ 3) 닉네임
+            // 3) 닉네임
             Label nameLabel = new Label(name);
-            nameLabel.setStyle(
-                    "-fx-font-size: 22px;" +
-                            "-fx-font-weight: bold;"
-            );
+            nameLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
 
-            // ✔ 4) 별 이미지
-            ImageView star = new ImageView(starImg);
+            // 4) 별 + 점수
+            ImageView star = new ImageView();
+            if (starImg != null) star.setImage(starImg);
             star.setFitWidth(28);
             star.setFitHeight(28);
 
-            // ✔ 5) 점수 숫자
             Label scoreLabel = new Label(score);
-            scoreLabel.setStyle(
-                    "-fx-font-size: 20px;" +
-                            "-fx-font-weight: bold;"
-            );
+            scoreLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
 
-            // 별 + 점수 묶음
             HBox scoreBox = new HBox(5, star, scoreLabel);
             scoreBox.setAlignment(Pos.CENTER_RIGHT);
             HBox.setHgrow(scoreBox, Priority.ALWAYS);
 
-            // 완성된 row 조합
             row.getChildren().addAll(rankBadge, avatar, nameLabel, scoreBox);
-
             rankingBox.getChildren().add(row);
         }
     }
-}
 
+    /* ---------- AppSession(currentUser)에 결과 반영 ---------- */
+    private void applyResultToSession(String[][] players) {
+        User me = AppSession.getCurrentUser();
+        if (me == null || players == null) return;
+
+        String myNick = me.getNickname();
+
+        for (String[] p : players) {
+            if (p == null || p.length < 3) continue;
+
+            String nickname  = p[1];
+            int rank         = Integer.parseInt(p[0]); // "1" or "2"
+            int pointDelta   = Integer.parseInt(p[2]); // 80 or 40
+            boolean isWinner = (rank == 1);
+
+            if (!myNick.equals(nickname)) {
+                continue;
+            }
+
+            int newWins    = me.getWins();
+            int newLosses  = me.getLosses();
+            int newPoints  = me.getPoints();
+
+            if (isWinner) {
+                newWins += 1;
+            } else {
+                newLosses += 1;
+            }
+            newPoints += pointDelta;
+
+            User updated = new User(
+                    me.getId(),
+                    me.getNickname(),
+                    me.getPassword(),
+                    newWins,
+                    newLosses,
+                    newPoints,
+                    me.getCreatedAt()
+            );
+            AppSession.setCurrentUser(updated);
+            break;
+        }
+    }
+}

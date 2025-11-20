@@ -55,8 +55,13 @@ public class CardSelectController {
 
     @FXML
     private void initialize() {
-        // point 값은 setUserId()에서 DB 조회 후 세팅
         timerLabel.setStyle("-fx-text-fill: white;");
+
+        if (com.omokpang.session.AppSession.isLoggedIn()) {
+            long id = com.omokpang.session.AppSession.getCurrentUser().getId();
+            setUserId(id);
+        }
+
         startTimer();
     }
 

@@ -224,7 +224,8 @@
 
             <HBox fx:id="cardSlotBox"
                   spacing="8"
-                  alignment="CENTER_RIGHT">
+                  alignment="CENTER_RIGHT"
+                  onMouseClicked="#handleOpenCardModal">
                 <!-- 아이콘들 -->
             </HBox>
 
