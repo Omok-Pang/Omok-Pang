@@ -5,10 +5,13 @@
 package com.omokpang.controller.main;
 
 import com.omokpang.SceneRouter;
+import com.omokpang.domain.user.User;
+import com.omokpang.session.AppSession;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+
 import java.net.URL;
 
 public class MainController {
@@ -40,10 +43,25 @@ public class MainController {
 
     @FXML
     private void initialize() {
-        // 초기 상태: 모두 회색, 아무것도 선택되지 않은 상태
+        // 1) 버튼 초기화
         resetModeImages();
         resetSizeImages();
-        // 포인트/승리 값은 나중에 서버 연동 시 set 메서드 통해 반영
+
+        // 2) 로그인 세션에서 유저 정보 읽어서 상단 바에 세팅
+        User user = AppSession.getCurrentUser();
+        if (user != null) {
+            labelUsername.setText(user.getNickname());        // 닉네임
+            labelPoint.setText(String.valueOf(user.getPoints())); // 포인트
+            labelWin.setText(String.valueOf(user.getWins()));     // 승리 수
+
+            // 프로필 이미지를 User에 따로 저장하고 있다면 여기서 세팅
+            // 예: user.getProfileImagePath()
+            // String profilePath = user.getProfileImagePath();
+            // if (profilePath != null && !profilePath.isBlank()) {
+            //     Image profileImg = loadImg(profilePath);
+            //     if (profileImg != null) imgProfile.setImage(profileImg);
+            // }
+        }
     }
 
     /* ==================== 모드 선택 (개인전 / 팀전) ==================== */
@@ -126,7 +144,6 @@ public class MainController {
         }
 
         if (playerCount == 0) {
-            // 필요 시 화면에 Label로 안내 문구 표시
             System.out.println("[WARN] 개인전 인원을 선택하지 않았습니다.");
             return;
         }
@@ -137,7 +154,7 @@ public class MainController {
         SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 
-    /* ==================== 유틸 / 외부에서 값 주입 ==================== */
+    /* ==================== 유틸 ==================== */
 
     private Image loadImg(String path) {
         URL url = getClass().getResource(path);
@@ -148,19 +165,5 @@ public class MainController {
         return new Image(url.toExternalForm());
     }
 
-    /** 로그인 후 AuthController에서 호출해줄 수 있는 메서드 (선택사항) */
-    public void setUserInfo(String username, String profileImagePath) {
-        if (username != null && !username.isBlank()) {
-            labelUsername.setText(username);
-        }
-        if (profileImagePath != null) {
-            imgProfile.setImage(loadImg(profileImagePath));
-        }
-    }
-
-    /** 포인트/승리 수 갱신용 (추후 서버 연동 시 사용 가능) */
-    public void setStats(int point, int winCount) {
-        labelPoint.setText(String.valueOf(point));
-        labelWin.setText(String.valueOf(winCount));
-    }
+    // setUserInfo / setStats 는 이제 안 써도 되지만, 다른 곳에서 호출 중이면 그대로 둬도 괜찮음
 }

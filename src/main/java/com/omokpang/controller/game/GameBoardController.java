@@ -5,6 +5,11 @@ import com.omokpang.controller.effect.SwapSelectGuideController;
 import com.omokpang.controller.effect.SwapNoticeController;
 import com.omokpang.domain.card.Card;
 import com.omokpang.session.MatchSession;   // 🔥 MatchSession 사용
+
+import com.omokpang.controller.result.ResultController;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -407,7 +412,7 @@ public class GameBoardController {
         applyPlace(r, c);
     }
 
-    /** 실제 돌 그리기 + 턴 전환 공통 로직 */
+    /** 실제 돌 그리기 + 승리 검사 + 턴 전환 공통 로직 */
     private void applyPlace(int r, int c) {
         double cx = c * CELL;
         double cy = r * CELL;
@@ -435,15 +440,129 @@ public class GameBoardController {
         stone.setLayoutY(cy - stoneSize / 2);
 
         boardRoot.getChildren().add(stone);
+
+        // 현재 턴의 플레이어(current)가 (r,c)에 둔 것
         board[r][c] = current;
 
-        // TODO: 승리 조건 검사
+        // ✅ 여기서 5목 승리 여부 검사
+        if (checkWin(r, c, current)) {
+            onGameOver(current);   // current가 이긴 사람의 sign(1 또는 -1)
+            return;                // 더 이상 턴 전환 X
+        }
 
-        // 턴 전환
+        // 승리 아니면 턴 전환
         current *= -1;
         updateTurnLabel();
         updateActivePlayerHighlight();
         restartTimer();
+    }
+
+    /** 마지막에 (r,c)에 둔 sign(1 또는 -1)이 5목인지 검사 */
+    private boolean checkWin(int r, int c, int sign) {
+        // 가로
+        if (countDirection(r, c, sign, 0, 1) + countDirection(r, c, sign, 0, -1) - 1 >= 5) return true;
+        // 세로
+        if (countDirection(r, c, sign, 1, 0) + countDirection(r, c, sign, -1, 0) - 1 >= 5) return true;
+        // ↘ 대각선
+        if (countDirection(r, c, sign, 1, 1) + countDirection(r, c, sign, -1, -1) - 1 >= 5) return true;
+        // ↗ 대각선
+        if (countDirection(r, c, sign, 1, -1) + countDirection(r, c, sign, -1, 1) - 1 >= 5) return true;
+
+        return false;
+    }
+
+    /** (dr,dc) 방향으로 같은 sign이 몇 개 연속인지 센다 (자기 자신 포함) */
+    private int countDirection(int r, int c, int sign, int dr, int dc) {
+        int cnt = 0;
+        int nr = r;
+        int nc = c;
+
+        while (isInside(nr, nc) && board[nr][nc] == sign) {
+            cnt++;
+            nr += dr;
+            nc += dc;
+        }
+        return cnt;
+    }
+
+    /** 승패가 결정되었을 때 호출: winnerSign = 1(위) 또는 -1(아래) */
+    private void onGameOver(int winnerSign) {
+        // 더 이상 타이머 / 클릭 동작 X
+        stopTimer();
+        boardRoot.setOnMouseClicked(null);
+
+        // 내가 이겼는지 여부
+        boolean iWon = (winnerSign == mySign);
+
+        // 결과 화면(모달 오버레이) 띄우기
+        openResultScene(iWon);
+    }
+
+    /** 결과 화면(ResultView) FXML 로드 + ResultController에 데이터 전달 (모달 오버레이) */
+    private void openResultScene(boolean iWon) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/result/ResultView.fxml")
+            );
+            Parent overlay = loader.load();
+            ResultController controller = loader.getController();
+
+            // 🔥 MatchSession에서 플레이어/아바타 정보 읽기
+            String[] players = MatchSession.getPlayers();
+            String[] avatars = MatchSession.getPlayerAvatars();
+            String me = MatchSession.getMyNickname();
+
+            String[][] ranking;
+
+            if (players == null || avatars == null || players.length < 2 || me == null) {
+                System.out.println("[GameBoard] WARN: cannot build ranking, MatchSession info missing.");
+                // 그래도 화면은 띄워보자 (더미 데이터)
+                ranking = new String[][]{
+                        {"1", "Player1", "80", "/images/user/user1.png"},
+                        {"2", "Player2", "40", "/images/user/user2.png"}
+                };
+            } else {
+                // 내 인덱스 / 상대 인덱스
+                int myIdx = 0;
+                for (int i = 0; i < players.length; i++) {
+                    if (players[i].equals(me)) {
+                        myIdx = i;
+                        break;
+                    }
+                }
+                int oppIdx = (myIdx == 0) ? 1 : 0;
+
+                // 점수: 이긴 사람 80, 진 사람 40
+                ranking = new String[2][4];
+                if (iWon) {
+                    ranking[0] = new String[]{"1", players[myIdx], "80", avatars[myIdx]};
+                    ranking[1] = new String[]{"2", players[oppIdx], "40", avatars[oppIdx]};
+                } else {
+                    ranking[0] = new String[]{"1", players[oppIdx], "80", avatars[oppIdx]};
+                    ranking[1] = new String[]{"2", players[myIdx], "40", avatars[myIdx]};
+                }
+            }
+
+            // 컨트롤러에 결과 데이터 세팅
+            controller.showResult(iWon, ranking);
+
+            // 🔹 GameBoard 중앙 StackPane 위에 모달 오버레이로 추가
+            overlay.setMouseTransparent(false);   // 아래 클릭 막기
+            centerStack.getChildren().add(overlay);
+
+            // (보드는 이미 onGameOver에서 클릭 막았으므로 추가 조치는 선택 사항)
+            // boardRoot.setMouseTransparent(true);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** 서버에서 "상대가 게임을 나갔다"는 이벤트를 받았을 때 호출 */
+    public void onOpponentLeft() {
+        System.out.println("[GameBoard] opponent left -> I win by default.");
+        // 남아있는 내가 승리
+        onGameOver(mySign);
     }
 
     private boolean isInside(int r, int c) {

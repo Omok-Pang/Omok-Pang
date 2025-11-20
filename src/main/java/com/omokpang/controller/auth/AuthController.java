@@ -227,21 +227,21 @@ public class AuthController {
 
     private void goToMainView(User user) {
         try {
-            // ✅ 1) 서버 연결 (이미 연결된 상태면 내부에서 그냥 리턴)
+            // 1) 서버 연결 (이미 연결돼 있으면 내부에서 그냥 리턴)
             OmokClient client = OmokClient.getInstance();
             if (!client.isConnected()) {
-                client.connect("127.0.0.1", 9000); // 서버 IP/포트
-                // 로그인 직후 서버에 내 닉네임 알려주기
+                client.connect("127.0.0.1", 9000);
                 client.send("LOGIN " + user.getNickname());
             }
 
-            // ✅ 2) 기존 MainView 전환 로직 그대로 유지
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
+            // 2) MainView 전환
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
             Parent mainRoot = loader.load();
 
-            MainController controller = loader.getController();
-            controller.setUserInfo(user.getNickname(), "/images/user/ic_profile.png");
-            controller.setStats(user.getPoints(), user.getWins());
+            // ❌ 여기서 더 이상 controller.setUserInfo / setStats 호출 안 함
+            // MainController.initialize()에서 AppSession.currentUser 읽어와서
+            // labelUsername / labelPoint / labelWin을 세팅함
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
             stage.setScene(new Scene(mainRoot));
