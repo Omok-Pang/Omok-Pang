@@ -22,6 +22,12 @@ public class ResultRepository {
                         "       points = points + ? " +
                         " WHERE nickname = ?";
 
+        // 🔍 디버그 로그 추가
+        System.out.println("[DEBUG] updateUserResult called: nick=" + nickname
+                + ", win=" + win + ", delta=" + pointDelta);
+        // 어디서 불렸는지 보고 싶으면 스택도 잠깐 찍어보기
+        // new Exception("[DEBUG] stack").printStackTrace();
+
         try (Connection conn = DataSourceProvider.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 

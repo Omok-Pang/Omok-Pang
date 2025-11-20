@@ -1,65 +1,84 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  역할: 게임 종료 결과 (GameBoard 위에 모달 오버레이로 띄우는 뷰)
+  역할: 게임 종료 결과
   핵심기능: 순위·포인트 표시 / 다시하기·나가기 전환
 -->
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.Rectangle?>
 
-<StackPane xmlns="http://javafx.com/javafx/21"
-           xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.omokpang.controller.result.ResultController">
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.result.ResultController"
+            prefWidth="750" prefHeight="600">
 
-    <!-- 🔹 어두운 반투명 배경 (모달 느낌) -->
-    <Rectangle width="750" height="600"
-               fill="#00000080" />
+    <!-- ⭐ 배경 -->
+    <ImageView fitWidth="750" fitHeight="600" preserveRatio="false"
+               AnchorPane.leftAnchor="0"
+               AnchorPane.topAnchor="0"
+               AnchorPane.rightAnchor="0"
+               AnchorPane.bottomAnchor="0">
 
-    <!-- 🔹 결과 영역 (중앙 카드) -->
+        <image>
+            <Image url="@/images/bg_darkmode.png"/>
+        </image>
+    </ImageView>
+
+    <!-- ⭐ 결과 영역 -->
     <VBox fx:id="resultBox"
           alignment="TOP_CENTER"
           spacing="25"
+
+          layoutX="100"
+          layoutY="0"
+
+          scaleX="0.75"
+          scaleY="0.75"
+
+          prefWidth="550"
           maxWidth="550"
+          prefHeight="300"
+          maxHeight="300"
+
           style="
-            -fx-background-color: rgba(255,255,255,0.85);
-            -fx-background-radius: 30;
-            -fx-padding: 0 40 40 40;
-            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0.2, 0, 5);
-          ">
+        -fx-background-color: rgba(255,255,255,0.85);
+        -fx-background-radius: 30;
+        -fx-padding: 0 40 40 40;
+        -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0.2, 0, 5);
+      ">
 
-        <children>
-            <!-- 결과 배너 (WIN / LOSE) -->
-            <ImageView fx:id="resultBannerImg"
-                       fitHeight="70"
-                       preserveRatio="true"/>
 
-            <!-- 플레이어 순위 -->
-            <VBox fx:id="rankingBox"
-                  alignment="CENTER"
-                  spacing="20"/>
 
-            <!-- 버튼 영역 -->
-            <HBox alignment="CENTER"
-                  spacing="40"
-                  style="-fx-padding: 10;">
+        <ImageView fx:id="resultBannerImg"
+                   fitHeight="70"
+                   preserveRatio="true"/>
 
-                <Button fx:id="retryBtn"
-                        style="-fx-background-color: transparent;">
-                    <graphic>
-                        <ImageView fx:id="retryImg" fitWidth="180" fitHeight="100"/>
-                    </graphic>
-                </Button>
+        <!-- 플레이어 순위 -->
+        <VBox fx:id="rankingBox"
+              alignment="CENTER"
+              spacing="20"
+        />
 
-                <Button fx:id="exitBtn"
-                        style="-fx-background-color: transparent;">
-                    <graphic>
-                        <ImageView fx:id="exitImg" fitWidth="180" fitHeight="100"/>
-                    </graphic>
-                </Button>
+        <HBox alignment="CENTER"
+              spacing="40"
+              style="-fx-padding: 10;">
 
-            </HBox>
-        </children>
+            <Button fx:id="retryBtn"
+                    style="-fx-background-color: transparent;">
+                <graphic>
+                    <ImageView fx:id="retryImg" fitWidth="180" fitHeight="100"/>
+                </graphic>
+            </Button>
+
+            <Button fx:id="exitBtn"
+                    style="-fx-background-color: transparent;">
+                <graphic>
+                    <ImageView fx:id="exitImg" fitWidth="180" fitHeight="100"/>
+                </graphic>
+            </Button>
+
+        </HBox>
+
     </VBox>
-</StackPane>
+</AnchorPane>

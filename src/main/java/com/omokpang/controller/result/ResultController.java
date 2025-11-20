@@ -19,14 +19,6 @@ import javafx.stage.Stage;
 
 import java.net.URL;
 
-/**
- * ResultController
- * 역할: 게임 종료 결과 화면.
- *  - 승/패 배너 보여주기
- *  - 순위/포인트(2인 기준) 표시
- *  - 다시하기(매칭 화면) / 나가기(메인 화면) 전환
- *  - DB(users)에 wins / losses / points 반영 + AppSession 갱신
- */
 public class ResultController {
 
     @FXML
@@ -52,7 +44,7 @@ public class ResultController {
     private Image rank1Img, rank2Img, rank3Img, rank4Img;
     private Image starImg;
 
-    // 서비스
+    // 서비스 (싱글톤)
     private final ResultService resultService = ResultService.getInstance();
 
     /* ---------- 공통 이미지 로더 ---------- */
@@ -111,10 +103,32 @@ public class ResultController {
         setResultBanner(isWin);
         loadRanking(players);
 
-        // 1) DB(users)에 결과 반영
-        resultService.applyGameResult(players);
+        // ==============================
+        // 1) 현재 로그인 유저 정보
+        // ==============================
+        User me = AppSession.getCurrentUser();
+        if (me == null || players == null || players.length == 0) {
+            return;
+        }
 
-        // 2) 현재 클라이언트(AppSession)의 유저 정보도 함께 갱신
+        String myNick        = me.getNickname();
+        String firstRankNick = players[0][1];   // 1등 닉네임
+
+        // ==============================
+        // 2) "1등인 클라이언트"만 DB 업데이트
+        //    → 한 판당 딱 1번만 UPDATE 실행
+        // ==============================
+        if (myNick.equals(firstRankNick)) {
+            System.out.println("[ResultController] I am rank1, updating DB...");
+            resultService.applyGameResult(players);  // 두 사람 모두 DB 반영
+        } else {
+            System.out.println("[ResultController] Not rank1, skip DB update.");
+        }
+
+        // ==============================
+        // 3) 각 클라이언트의 AppSession 은
+        //    자기 닉네임에 해당하는 값만 메모리에서 갱신
+        // ==============================
         applyResultToSession(players);
     }
 
@@ -208,22 +222,17 @@ public class ResultController {
                 continue;
             }
 
-            // 기존 값
             int newWins    = me.getWins();
             int newLosses  = me.getLosses();
             int newPoints  = me.getPoints();
 
-            // 승/패 반영
             if (isWinner) {
                 newWins += 1;
             } else {
                 newLosses += 1;
             }
-
-            // 포인트 반영
             newPoints += pointDelta;
 
-            // 🔥 업데이트된 값으로 새 User 인스턴스를 만들어 세션에 다시 저장
             User updated = new User(
                     me.getId(),
                     me.getNickname(),
@@ -233,7 +242,6 @@ public class ResultController {
                     newPoints,
                     me.getCreatedAt()
             );
-
             AppSession.setCurrentUser(updated);
             break;
         }
