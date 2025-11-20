@@ -11,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.application.Platform;
 
 import java.io.IOException;
 
@@ -102,7 +103,7 @@ public class GameIntroController {
             // 4) 네트워크 클라이언트 가져오기
             OmokClient client = OmokClient.getInstance();
 
-            // 5) GameBoard → 서버 방향 (말풍선, 돌 두기 전송)
+            // 5) GameBoard → 서버 방향 (말풍선, 돌 두기, SharedStone 전송)
             controller.bindNetwork(new GameBoardController.NetworkClient() {
                 @Override
                 public void sendCheer(String msg) {
@@ -115,25 +116,60 @@ public class GameIntroController {
                     // PLACE r c
                     client.send("PLACE " + row + " " + col);
                 }
+
+                @Override
+                public void sendSharedStoneStart() {
+                    // SharedStone 카드 사용 시작 알림
+                    // 예: SHARED_STONE_START
+                    client.send("SHARED_STONE_START");
+                }
+
+                @Override
+                public void sendSharedStoneTarget(int row, int col) {
+                    // SharedStone 타겟 좌표 전송
+                    // 예: SHARED_STONE_TARGET r c
+                    client.send("SHARED_STONE_TARGET " + row + " " + col);
+                }
             });
 
             // 6) 서버 → GameBoard 방향 (메시지 수신 처리)
             client.setMessageHandler(line -> {
-                if (line.startsWith("CHEER ")) {
-                    String text = line.substring("CHEER ".length());
-                    controller.onCheerReceivedFromOpponent(text);
+                System.out.println("[CLIENT] recv: " + line);
 
-                } else if (line.startsWith("PLACE ")) {
-                    String[] parts = line.split("\\s+");
-                    if (parts.length >= 3) {
-                        try {
-                            int r = Integer.parseInt(parts[1]);
-                            int c = Integer.parseInt(parts[2]);
-                            controller.onPlaceFromOpponent(r, c);
-                        } catch (NumberFormatException ignored) {}
+                // 🔥 모든 UI 변경은 JavaFX Application Thread에서 실행
+                Platform.runLater(() -> {
+                    if (line.startsWith("CHEER ")) {
+                        String text = line.substring("CHEER ".length());
+                        controller.onCheerReceivedFromOpponent(text);
+
+                    } else if (line.startsWith("PLACE ")) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            try {
+                                int r = Integer.parseInt(parts[1]);
+                                int c = Integer.parseInt(parts[2]);
+                                controller.onPlaceFromOpponent(r, c);
+                            } catch (NumberFormatException ignored) {}
+                        }
+
+                        // 🔥 SharedStone 관련 메시지
+                    } else if (line.startsWith("SHARED_STONE_START")) {
+                        // 상대가 SharedStone 카드 사용 시작
+                        controller.onSharedStoneStartFromOpponent();
+
+                    } else if (line.startsWith("SHARED_STONE_TARGET")) {
+                        // 상대가 공용돌로 만든 좌표 수신
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            try {
+                                int r = Integer.parseInt(parts[1]);
+                                int c = Integer.parseInt(parts[2]);
+                                controller.onSharedStoneTargetFromOpponent(r, c);
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
-                }
-                // MATCH, ECHO 등은 다른 화면에서 처리하니까 여기서는 패스
+                    // MATCH, ECHO 등은 다른 화면에서 처리
+                });
             });
 
             // 7) 실제 화면 전환 (Intro -> Board)

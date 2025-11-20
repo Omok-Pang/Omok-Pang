@@ -63,6 +63,28 @@ public class GameServer {
         }
     }
 
+    // SharedStone 시작 알림: from -> 그의 상대에게만
+    private static void forwardSharedStoneStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SHARED_STONE_START");
+        }
+    }
+
+    // SharedStone 타겟 좌표 전달: from -> 그의 상대에게만
+    private static void forwardSharedStoneTarget(String from, int r, int c) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SHARED_STONE_TARGET " + r + " " + c);
+        }
+    }
+
     private static void handleClient(Socket socket) {
         String nickname = null;
 
@@ -109,6 +131,27 @@ public class GameServer {
                             int r = Integer.parseInt(parts[1]);
                             int c = Integer.parseInt(parts[2]);
                             forwardPlace(nickname, r, c);
+                        }
+                    }
+                    continue;
+                }
+
+                // 🔥 SharedStone 시작: SHARED_STONE_START
+                if (line.startsWith("SHARED_STONE_START")) {
+                    if (nickname != null) {
+                        forwardSharedStoneStart(nickname);
+                    }
+                    continue;
+                }
+
+                // 🔥 SharedStone 타겟: SHARED_STONE_TARGET r c
+                if (line.startsWith("SHARED_STONE_TARGET")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            int r = Integer.parseInt(parts[1]);
+                            int c = Integer.parseInt(parts[2]);
+                            forwardSharedStoneTarget(nickname, r, c);
                         }
                     }
                     continue;

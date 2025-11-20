@@ -3,6 +3,9 @@ package com.omokpang.controller.game;
 import com.omokpang.controller.effect.TimeLockNoticeController;
 import com.omokpang.controller.effect.SwapSelectGuideController;
 import com.omokpang.controller.effect.SwapNoticeController;
+import com.omokpang.controller.effect.SharedStoneGuideController;
+import com.omokpang.controller.effect.SharedStoneNoticeController;
+
 import com.omokpang.domain.card.Card;
 import com.omokpang.session.MatchSession;   // 🔥 MatchSession 사용
 
@@ -119,6 +122,15 @@ public class GameBoardController {
     // 보드 상태: 0=빈칸, 1=위 유저의 돌, -1=아래 유저의 돌
     private final int[][] board = new int[N][N];
 
+    // 게임이 이미 끝났는지 여부 (카드 사용 후 중복 턴 전환 방지)
+    private boolean gameEnded = false;
+
+    // 돌 이미지 뷰 저장 (SharedStone 등으로 변경하기 위해)
+    private final ImageView[][] stoneViews = new ImageView[N][N];
+
+    // 공용돌(SharedStone) 여부 표시
+    private final boolean[][] sharedStones = new boolean[N][N];
+
     // 현재 턴(누가 둘 차례인지): 1=위 유저, -1=아래 유저
     private int current = 1;
 
@@ -148,9 +160,13 @@ public class GameBoardController {
             "다음 판엔 이긴다팡"
     };
 
-    // ================== Swap 카드 관련 상태 ==================
+    // ================== Swap / SharedStone 카드 관련 상태 ==================
     private SwapSelectGuideController swapGuideController;
     private boolean swapSelecting = false;
+
+    // SharedStone 선택 모드 여부
+    private boolean sharedStoneSelecting = false;
+    private SharedStoneGuideController sharedStoneGuideController;
 
     // ================== 외부에서 플레이어 배치 설정 ==================
     /**
@@ -382,10 +398,21 @@ public class GameBoardController {
         boardRoot.getChildren().addAll(b1, b2, b3, b4);
     }
 
+    /** 내 턴인지 여부 공통 체크 */
+    private boolean isMyTurn() {
+        return current == mySign;
+    }
+
     /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
     private void handleLocalClick(int r, int c) {
-        // ✅ 내 턴인지: current 가 mySign(1 or -1) 과 같은지만 본다
-        boolean myTurn = (current == mySign);
+        // ✅ SharedStone 선택 모드인 경우: 돌 두기 대신 "상대 돌 선택"으로 사용
+        if (sharedStoneSelecting) {
+            handleSharedStoneTargetClick(r, c);
+            return;
+        }
+
+        // ✅ 일반 돌 두기: 내 턴인지 확인
+        boolean myTurn = isMyTurn();
 
         if (!myTurn) {
             return; // 내 턴 아니면 무시
@@ -441,8 +468,9 @@ public class GameBoardController {
 
         boardRoot.getChildren().add(stone);
 
-        // 현재 턴의 플레이어(current)가 (r,c)에 둔 것
+        // 현재 턴의 플레이어(current)가 (r,c) 에 둔 것
         board[r][c] = current;
+        stoneViews[r][c] = stone;
 
         // ✅ 여기서 5목 승리 여부 검사
         if (checkWin(r, c, current)) {
@@ -477,7 +505,7 @@ public class GameBoardController {
         int nr = r;
         int nc = c;
 
-        while (isInside(nr, nc) && board[nr][nc] == sign) {
+        while (isStoneForSign(nr, nc, sign)) {
             cnt++;
             nr += dr;
             nc += dc;
@@ -487,6 +515,10 @@ public class GameBoardController {
 
     /** 승패가 결정되었을 때 호출: winnerSign = 1(위) 또는 -1(아래) */
     private void onGameOver(int winnerSign) {
+        // 이미 끝난 뒤에 또 호출되는 것 방지
+        if (gameEnded) return;
+        gameEnded = true;
+
         // 더 이상 타이머 / 클릭 동작 X
         stopTimer();
         boardRoot.setOnMouseClicked(null);
@@ -496,6 +528,14 @@ public class GameBoardController {
 
         // 결과 화면(모달 오버레이) 띄우기
         openResultScene(iWon);
+    }
+
+    /** 카드 사용으로 턴이 끝났을 때 공통 처리 */
+    private void endTurnAfterCardUse() {
+        current *= -1;                    // 턴 전환
+        updateTurnLabel();                // "내 턴 / 상대 턴" 텍스트 갱신
+        updateActivePlayerHighlight();    // 아바타 테두리 하이라이트 갱신
+        restartTimer();                   // 다음 턴 타이머 시작
     }
 
     /** 결과 화면(ResultView) FXML 로드 + ResultController에 데이터 전달 (모달 오버레이) */
@@ -586,7 +626,7 @@ public class GameBoardController {
                         "-fx-border-width: 4;" +
                         "-fx-border-radius: 999;";
 
-        boolean myTurn = (current == mySign);
+        boolean myTurn = isMyTurn();
 
         if (myTurn) {
             // ✅ 내 턴이면 아래(나)를 강조
@@ -600,7 +640,7 @@ public class GameBoardController {
 
     /** 상단 텍스트로 "내 턴 / 상대 턴" 표시 */
     private void updateTurnLabel() {
-        boolean myTurn = (current == mySign);
+        boolean myTurn = isMyTurn();
 
         if (myTurn) {
             turnLabel.setText("내 턴 (아래 유저)");
@@ -682,7 +722,268 @@ public class GameBoardController {
         hide.play();
     }
 
-    // ================== 카드 선택 모달 / TimeLock / Swap / 카드 슬롯 ==================
+    // ================== 카드 모달 오픈 ==================
+
+    /**
+     * FXML에서 카드 슬롯(HBox)을 클릭했을 때 호출되는 메서드.
+     * - 오른쪽 아래 카드 영역 클릭 → 카드 사용 모달 띄우기
+     */
+    @FXML
+    private void handleOpenCardModal() {
+        openCardUseModal();
+    }
+
+    /**
+     * 실제로 CardUseModal.fxml을 로드하여 centerStack 위에 오버레이로 올린다.
+     */
+    private void openCardUseModal() {
+        // 아직 받은 카드가 없으면 아무 것도 안 함
+        if (receivedCards == null || receivedCards.isEmpty()) {
+            System.out.println("[GameBoard] 카드가 없어 모달을 띄우지 않습니다.");
+            return;
+        }
+
+        try {
+            // ⚠️ FXML 경로는 실제 파일 이름에 맞게 수정해줘!
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/game/CardUseModal.fxml")
+            );
+            StackPane modalRoot = loader.load();
+
+            CardUseModalController controller = loader.getController();
+            // 1) 내가 가진 카드 목록 전달
+            controller.setCards(receivedCards);
+            // 2) 어떤 카드를 골랐는지 콜백으로 전달
+            controller.setOnCardSelected(this::onCardSelectedFromModal);
+
+            // GameBoard 중앙 StackPane 위에 모달 추가 (ResultView랑 같은 방식)
+            modalRoot.setMouseTransparent(false);   // 아래 클릭 막기
+            centerStack.getChildren().add(modalRoot);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 카드 사용 모달에서 카드 하나를 선택했을 때 호출되는 콜백.
+     * - 여기서 카드 타입별로 효과 처리.
+     */
+    private void onCardSelectedFromModal(Card selectedCard) {
+        if (selectedCard == null) return;
+
+        System.out.println("[GameBoard] 카드 선택됨: " + selectedCard.getName());
+
+        // ⚠️ CardType enum 기준. 실제 enum 이름에 맞게 수정해줘.
+        // 예: com.omokpang.domain.card.CardType.SHARED_STONE 등
+        try {
+            switch (selectedCard.getType()) {
+                case SHARED_STONE -> {
+                    // 공용돌 카드 사용
+                    useSharedStoneCard();
+                }
+                default -> {
+                    // TODO: 다른 카드 타입들(상대돌제거, 두번두기, 스왑, 타임락, 보호, 폭탄 등)은 여기서 처리
+                    System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
+                }
+            }
+        } catch (Exception e) {
+            // enum 타입이 다르거나 null인 경우를 대비한 방어 코드
+            System.out.println("[GameBoard] 카드 타입 처리 중 오류: " + e.getMessage());
+        }
+
+        // 사용한 카드를 목록에서 제거하고, 슬롯 UI 갱신
+        if (receivedCards != null) {
+            receivedCards.remove(selectedCard);
+            setReceivedCards(receivedCards);  // 오른쪽 아래 아이콘 다시 그림
+        }
+    }
+
+    // ================== SharedStone 카드 로직 ==================
+
+    /**
+     * SharedStone 카드 사용 시작 (내가 카드 선택했을 때 호출).
+     * - 서버에 "SharedStone 시작" 알림
+     * - SharedStone 안내 오버레이 + 상대 돌 선택 모드 진입
+     */
+    private void useSharedStoneCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 SharedStone 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] SharedStone 카드 사용!");
+
+        // 서버에 "SharedStone 사용 시작" 알림
+        if (networkClient != null) {
+            networkClient.sendSharedStoneStart();
+        }
+
+        // 가이드 오버레이 + 선택 모드 시작
+        enterSharedStoneSelectMode();
+    }
+
+    /**
+     * SharedStone 선택 모드 진입.
+     * - SharedStoneGuide.fxml 오버레이를 centerStack 위에 올리고
+     * - 사용자가 상대 돌을 클릭하면 콜백으로 (r,c) 전달.
+     */
+    private void enterSharedStoneSelectMode() {
+        sharedStoneSelecting = true;
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SharedStoneGuide.fxml") // ⚠️ 경로 확인 필요
+            );
+            StackPane overlay = loader.load();
+            sharedStoneGuideController = loader.getController();
+
+            // GameBoard → SharedStoneGuide 로 콜백 등록
+            sharedStoneGuideController.setOnStoneSelected((row, col) -> {
+                // 가이드 컨트롤러 입장에서 선택 완료 신호를 받았을 때
+                onSharedStoneTargetChosenByMe(row, col);
+            });
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+            // 오버레이 로드 실패하더라도 선택 모드 자체는 유지 (단, 안내 텍스트는 안 보임)
+        }
+    }
+
+    /**
+     * SharedStone 선택 모드에서 보드를 클릭했을 때 동작.
+     * - 상대 돌(opponentSign)만 선택 가능.
+     */
+    private void handleSharedStoneTargetClick(int r, int c) {
+        if (!isInside(r, c)) return;
+
+        // 상대 돌만 선택 가능
+        if (board[r][c] != opponentSign) {
+            System.out.println("[GameBoard] SharedStone: 상대 돌이 아닌 곳을 클릭했습니다.");
+            return;
+        }
+
+        // 가이드 컨트롤러가 있으면 → 그쪽 콜백 호출
+        if (sharedStoneGuideController != null) {
+            sharedStoneGuideController.notifyStoneSelected(r, c);
+        } else {
+            // 가이드 없이 직접 처리
+            onSharedStoneTargetChosenByMe(r, c);
+        }
+    }
+
+    /** 해당 좌표의 돌이 주어진 sign(1 또는 -1)의 연속에 포함되는지 여부 */
+    private boolean isStoneForSign(int r, int c, int sign) {
+        if (!isInside(r, c)) return false;
+
+        // 원래 그 플레이어 돌
+        if (board[r][c] == sign) return true;
+
+        // 공용돌이면 양쪽 다 자신의 돌로 인정
+        if (sharedStones[r][c]) return true;
+
+        return false;
+    }
+
+
+    /**
+     * 내가 SharedStone 타겟 좌표(r,c)를 최종 선택했을 때 호출.
+     * - SharedStone 효과를 내 보드에 적용
+     * - 서버에 (r,c) 전송
+     * - 이 턴은 "카드 사용"으로 끝 → 턴 전환
+     */
+    private void onSharedStoneTargetChosenByMe(int r, int c) {
+        sharedStoneSelecting = false;
+
+        // 실제 공용돌 적용 (여기서 승리하면 onGameOver에서 gameEnded = true)
+        applySharedStoneAt(r, c);
+
+        // 서버에 좌표 전송 (상대 보드도 동일하게 변경)
+        if (networkClient != null) {
+            networkClient.sendSharedStoneTarget(r, c);
+        }
+
+        // 이미 승리해서 게임이 끝난 경우에는 턴 전환 X
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    /**
+     * (r,c)에 이미 놓인 돌을 "공용돌" 이미지로 변경하고, sharedStones 플래그를 세팅.
+     */
+    private void applySharedStoneAt(int r, int c) {
+        if (!isInside(r, c)) return;
+        if (board[r][c] == 0) return; // 빈 칸이면 무시
+
+        ImageView targetStone = stoneViews[r][c];
+        if (targetStone == null) {
+            System.out.println("[GameBoard] SharedStone: 해당 위치에 ImageView가 없습니다. (r=" + r + ", c=" + c + ")");
+            return;
+        }
+
+        try {
+            // ⚠️ 공용돌 이미지 경로는 실제 리소스에 맞게 변경해줘
+            Image sharedImg = new Image(
+                    getClass().getResource("/images/cards/shared_stone.png").toExternalForm()
+            );
+            targetStone.setImage(sharedImg);
+            sharedStones[r][c] = true;
+
+            System.out.println("[GameBoard] SharedStone 적용 완료 at (" + r + ", " + c + ")");
+
+            // 🔥 공용돌 포함 즉시 승리 여부 체크 (양쪽 모두)
+            if (checkWin(r, c, mySign)) {
+                onGameOver(mySign);
+                return;
+            }
+            if (checkWin(r, c, opponentSign)) {
+                onGameOver(opponentSign);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 서버에서 "상대가 SharedStone 카드를 사용했다"는 이벤트를 받았을 때 호출.
+     * - SharedStoneNotice.fxml 오버레이를 띄워 3초 안내.
+     */
+    public void onSharedStoneStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 SharedStone 카드를 사용했습니다.");
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SharedStoneNotice.fxml") // ⚠️ 경로 확인 필요
+            );
+            StackPane overlay = loader.load();
+            SharedStoneNoticeController controller = loader.getController();
+            // 별도 데이터 전달 필요 없으면 컨트롤러는 기본 initialize()만 사용
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 서버에서 "SharedStone 타겟 좌표"를 전달받았을 때 호출.
+     * - 내 보드에도 동일한 공용돌 효과 적용.
+     * - 상대가 카드를 사용한 것이므로, 이제 내 턴으로 넘어옴.
+     */
+    public void onSharedStoneTargetFromOpponent(int r, int c) {
+        System.out.println("[GameBoard] 서버로부터 SharedStone 타겟 좌표 수신: (" + r + ", " + c + ")");
+        applySharedStoneAt(r, c);
+
+        // SharedStone 때문에 누군가 바로 승리하면 gameEnded = true 상태라서 턴 전환 X
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    // ================== 카드 슬롯 UI ==================
     /**
      * 카드 선택 화면에서 받은 카드 2장을 GameBoard에 표시하는 메서드.
      * - MatchSession에서 가져온 카드들을 UI 슬롯에 채운다.
@@ -715,6 +1016,10 @@ public class GameBoardController {
     public interface NetworkClient {
         void sendCheer(String msg);
         void sendPlace(int row, int col);
+
+        // ✅ SharedStone 카드 네트워크용 메서드 추가
+        void sendSharedStoneStart();           // 내가 SharedStone 사용 시작
+        void sendSharedStoneTarget(int row, int col); // 내가 공용돌로 만든 타겟 좌표
     }
 
     private NetworkClient networkClient;
