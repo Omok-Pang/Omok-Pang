@@ -155,6 +155,9 @@ public class GameBoardController {
     private Timeline timer;   // 1초마다 동작하는 타이머
     private int remain = DEFAULT_TURN_SECONDS;  // 남은 시간(초)
 
+    /** Time Lock 카드가 적용될 플레이어의 sign (1 또는 -1, 0이면 효과 없음) */
+    private int timeLockTargetSign = 0;
+
     // ================== 프리셋 말풍선 텍스트 ==================
     private static final String[] PRESET_MESSAGES = {
             "빵야빵야 오목팡!",
@@ -664,7 +667,39 @@ public class GameBoardController {
 
     // ================== 턴 타이머 로직 ==================
     private void startTurn() {
-        startTurnWithSeconds(DEFAULT_TURN_SECONDS);
+        int seconds = DEFAULT_TURN_SECONDS;
+
+        // Time Lock 카드가 걸려 있고, 이번 턴의 플레이어 sign이 대상이면 3초로 제한
+        if (timeLockTargetSign != 0 && current == timeLockTargetSign) {
+            seconds = TIMELOCK_TURN_SECONDS;
+            // 한 턴만 효과 → 첫 적용 후 바로 초기화
+            timeLockTargetSign = 0;
+        }
+
+        startTurnWithSeconds(seconds);
+    }
+
+    /** Time Lock 카드 사용 (내가 카드 선택했을 때 호출) */
+    private void useTimeLockCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 Time Lock 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] Time Lock 카드 사용!");
+
+        // 다음 턴에 "상대(sign = opponentSign)"의 제한시간을 3초로 줄인다.
+        timeLockTargetSign = opponentSign;
+
+        // 서버에 Time Lock 사용 시작 알림
+        if (networkClient != null) {
+            networkClient.sendTimeLockStart();
+        }
+
+        // 다른 공격 카드와 동일하게, 카드를 사용하면 내 턴은 종료
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
     }
 
     private void startTurnWithSeconds(int seconds) {
@@ -787,8 +822,6 @@ public class GameBoardController {
 
         System.out.println("[GameBoard] 카드 선택됨: " + selectedCard.getName());
 
-        // ⚠️ CardType enum 기준. 실제 enum 이름에 맞게 수정해줘.
-        // 예: com.omokpang.domain.card.CardType.SHARED_STONE 등
         try {
             switch (selectedCard.getType()) {
                 case SHARED_STONE -> {
@@ -797,19 +830,21 @@ public class GameBoardController {
                 case BOMB -> {
                     useBombCard();
                 }
+                case TIME_LOCK -> {
+                    useTimeLockCard();
+                }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
                 }
             }
         } catch (Exception e) {
-            // enum 타입이 다르거나 null인 경우를 대비한 방어 코드
             System.out.println("[GameBoard] 카드 타입 처리 중 오류: " + e.getMessage());
         }
 
         // 사용한 카드를 목록에서 제거하고, 슬롯 UI 갱신
         if (receivedCards != null) {
             receivedCards.remove(selectedCard);
-            setReceivedCards(receivedCards);  // 오른쪽 아래 아이콘 다시 그림
+            setReceivedCards(receivedCards);
         }
     }
 
@@ -1158,9 +1193,12 @@ public class GameBoardController {
         void sendSharedStoneStart();
         void sendSharedStoneTarget(int row, int col);
 
-        // 🔥 Bomb!!
+        // Bomb!!
         void sendBombStart();
         void sendBombTarget(int row, int col);
+
+        // Time Lock
+        void sendTimeLockStart();
     }
 
     private NetworkClient networkClient;
@@ -1170,5 +1208,32 @@ public class GameBoardController {
         this.networkClient = client;
         // 말풍선용 래핑 (기존 cheerSender 그대로 사용)
         this.cheerSender = client::sendCheer;
+    }
+
+    /**
+     * 서버에서 "상대가 Time Lock 카드를 사용했다"는 알림을 받았을 때 호출.
+     * - 내 sign 에 대해 Time Lock 대상 설정
+     * - 하단 안내 오버레이(TimeLockNotice)를 띄움
+     * - 턴 전환 및 타이머 재시작 (상대가 카드를 사용하면 이제 내 턴 시작)
+     */
+    public void onTimeLockStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 Time Lock 카드를 사용했습니다.");
+
+        timeLockTargetSign = mySign;
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/TimeLockNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 상대가 카드를 사용 → 내 턴으로 넘어오므로, 턴 전환 + 타이머 재시작
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
     }
 }

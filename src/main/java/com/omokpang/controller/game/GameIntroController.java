@@ -107,20 +107,16 @@ public class GameIntroController {
             controller.bindNetwork(new GameBoardController.NetworkClient() {
                 @Override
                 public void sendCheer(String msg) {
-                    // CHEER <텍스트>
                     client.send("CHEER " + msg);
                 }
 
                 @Override
                 public void sendPlace(int row, int col) {
-                    // PLACE r c
                     client.send("PLACE " + row + " " + col);
                 }
 
                 @Override
                 public void sendSharedStoneStart() {
-                    // SharedStone 카드 사용 시작 알림
-                    // 예: SHARED_STONE_START
                     client.send("SHARED_STONE_START");
                 }
 
@@ -137,6 +133,11 @@ public class GameIntroController {
                 @Override
                 public void sendBombTarget(int row, int col) {
                     client.send("BOMB_TARGET " + row + " " + col);
+                }
+
+                @Override
+                public void sendTimeLockStart() {
+                    client.send("TIMELOCK_START");
                 }
             });
 
@@ -187,6 +188,8 @@ public class GameIntroController {
                                 controller.onBombTargetFromOpponent(r, c);
                             } catch (NumberFormatException ignored) {}
                         }
+                    } else if (line.startsWith("TIMELOCK_START")) {
+                        controller.onTimeLockStartFromOpponent();
                     }
                     // MATCH, ECHO 등은 다른 화면에서 처리
                 });

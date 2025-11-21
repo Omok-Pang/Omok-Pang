@@ -177,6 +177,13 @@ public class GameServer {
                     }
                     continue;
                 }
+                // 🔥 Time Lock 시작: TIMELOCK_START
+                if (line.startsWith("TIMELOCK_START")) {
+                    if (nickname != null) {
+                        forwardTimeLockStart(nickname);
+                    }
+                    continue;
+                }
 
                 // 기타: 테스트용 에코
                 out.println("ECHO: " + line);
@@ -240,6 +247,17 @@ public class GameServer {
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
             outOpp.println("BOMB_TARGET " + r + " " + c);
+        }
+    }
+
+    // Time Lock 시작 알림: from -> 그의 상대에게만
+    private static void forwardTimeLockStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("TIMELOCK_START");
         }
     }
 
