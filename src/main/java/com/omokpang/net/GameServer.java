@@ -185,6 +185,29 @@ public class GameServer {
                     continue;
                 }
 
+                // 🔥 Swap 시작: SWAP_START
+                if (line.startsWith("SWAP_START")) {
+                    if (nickname != null) {
+                        forwardSwapStart(nickname);
+                    }
+                    continue;
+                }
+
+                // 🔥 Swap 타겟: SWAP_TARGET myR myC oppR oppC
+                if (line.startsWith("SWAP_TARGET")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 5) {
+                            int myR  = Integer.parseInt(parts[1]);
+                            int myC  = Integer.parseInt(parts[2]);
+                            int oppR = Integer.parseInt(parts[3]);
+                            int oppC = Integer.parseInt(parts[4]);
+                            forwardSwapTarget(nickname, myR, myC, oppR, oppC);
+                        }
+                    }
+                    continue;
+                }
+
                 // 기타: 테스트용 에코
                 out.println("ECHO: " + line);
             }
@@ -258,6 +281,28 @@ public class GameServer {
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
             outOpp.println("TIMELOCK_START");
+        }
+    }
+
+    // Swap 시작 알림: from -> 그의 상대에게만
+    private static void forwardSwapStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SWAP_START");
+        }
+    }
+
+    // Swap 타겟 좌표 전달: from -> 그의 상대에게만
+    private static void forwardSwapTarget(String from, int myR, int myC, int oppR, int oppC) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
         }
     }
 

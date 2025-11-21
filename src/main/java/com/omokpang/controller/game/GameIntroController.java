@@ -139,6 +139,16 @@ public class GameIntroController {
                 public void sendTimeLockStart() {
                     client.send("TIMELOCK_START");
                 }
+
+                @Override
+                public void sendSwapStart() {
+                    client.send("SWAP_START");
+                }
+
+                @Override
+                public void sendSwapTarget(int myR, int myC, int oppR, int oppC) {
+                    client.send("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
+                }
             });
 
             // 6) 서버 → GameBoard 방향 (메시지 수신 처리)
@@ -190,6 +200,20 @@ public class GameIntroController {
                         }
                     } else if (line.startsWith("TIMELOCK_START")) {
                         controller.onTimeLockStartFromOpponent();
+                        // 🔥 Swap 관련
+                    } else if (line.startsWith("SWAP_START")) {
+                        controller.onSwapStartFromOpponent();
+                    } else if (line.startsWith("SWAP_TARGET")) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 5) {
+                            try {
+                                int myR  = Integer.parseInt(parts[1]);
+                                int myC  = Integer.parseInt(parts[2]);
+                                int oppR = Integer.parseInt(parts[3]);
+                                int oppC = Integer.parseInt(parts[4]);
+                                controller.onSwapTargetFromOpponent(myR, myC, oppR, oppC);
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
                     // MATCH, ECHO 등은 다른 화면에서 처리
                 });

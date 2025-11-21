@@ -75,6 +75,7 @@ public class GameBoardController {
     // ================== Swap / SharedStone / Bomb 카드 관련 상태 ==================
     private SwapSelectGuideController swapGuideController;
     private boolean swapSelecting = false;
+    private int[] swapMyPos = null;
 
     // SharedStone
     private boolean sharedStoneSelecting = false;
@@ -414,6 +415,12 @@ public class GameBoardController {
 
     /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
     private void handleLocalClick(int r, int c) {
+
+        // ✅ Swap 선택 모드인 경우: 내 돌 → 상대 돌 순서로 선택
+        if (swapSelecting) {
+            handleSwapSelectClick(r, c);
+            return;
+        }
 
         // ✅ Bomb 선택 모드인 경우: 3x3 제거용 클릭으로 사용
         if (bombSelecting) {
@@ -833,6 +840,9 @@ public class GameBoardController {
                 case TIME_LOCK -> {
                     useTimeLockCard();
                 }
+                case SWAP -> {
+                    useSwapCard();
+                }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
                 }
@@ -1199,6 +1209,10 @@ public class GameBoardController {
 
         // Time Lock
         void sendTimeLockStart();
+
+        // Swap
+        void sendSwapStart();
+        void sendSwapTarget(int myR, int myC, int oppR, int oppC);
     }
 
     private NetworkClient networkClient;
@@ -1232,6 +1246,196 @@ public class GameBoardController {
         }
 
         // 상대가 카드를 사용 → 내 턴으로 넘어오므로, 턴 전환 + 타이머 재시작
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    // ================== Swap 카드 로직 ==================
+
+    /** Swap 카드 사용 시작 (내가 카드 선택했을 때 호출) */
+    private void useSwapCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 Swap 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] Swap 카드 사용!");
+
+        // 서버에 Swap 사용 시작 알림
+        if (networkClient != null) {
+            networkClient.sendSwapStart();
+        }
+
+        enterSwapSelectMode();
+    }
+
+    /** Swap 선택 모드 진입: 안내 오버레이를 띄우고, 클릭은 handleSwapSelectClick에서 처리 */
+    private void enterSwapSelectMode() {
+        swapSelecting = true;
+        swapMyPos = null;
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SwapSelectGuide.fxml")
+            );
+            StackPane overlay = loader.load();
+            swapGuideController = loader.getController();
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Swap 선택 모드에서 보드를 클릭했을 때: 1번 클릭은 내 돌, 2번 클릭은 상대 돌 */
+    private void handleSwapSelectClick(int r, int c) {
+        if (!isInside(r, c)) return;
+
+        // 1단계: 내 돌 선택
+        if (swapMyPos == null) {
+            if (board[r][c] != mySign) {
+                System.out.println("[GameBoard] Swap: 내 돌이 아닌 곳을 클릭했습니다.");
+                return;
+            }
+            swapMyPos = new int[]{r, c};
+            if (swapGuideController != null) {
+                swapGuideController.onMyStoneSelected();
+            }
+            System.out.println("[GameBoard] Swap: 내 돌 선택 (" + r + "," + c + ")");
+            return;
+        }
+
+        // 2단계: 상대 돌 선택
+        if (board[r][c] != opponentSign) {
+            System.out.println("[GameBoard] Swap: 상대 돌이 아닌 곳을 클릭했습니다.");
+            return;
+        }
+
+        int myR = swapMyPos[0];
+        int myC = swapMyPos[1];
+        int oppR = r;
+        int oppC = c;
+
+        System.out.println("[GameBoard] Swap: 상대 돌 선택 (" + oppR + "," + oppC + ")");
+
+        swapSelecting = false;
+        swapMyPos = null;
+
+        if (swapGuideController != null) {
+            swapGuideController.close();
+            swapGuideController = null;
+        }
+
+        // 실제 교환 적용
+        applySwapStones(myR, myC, oppR, oppC);
+
+        // 서버에 좌표 전송 (상대 보드도 동일하게 변경)
+        if (networkClient != null) {
+            networkClient.sendSwapTarget(myR, myC, oppR, oppC);
+        }
+
+        // 교환 결과로 누가 이겼을 수도 있으므로 gameEnded 여부 확인
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    /** 두 좌표의 돌을 교환하고, 승리 여부를 검사한다. */
+    private void applySwapStones(int myR, int myC, int oppR, int oppC) {
+        if (!isInside(myR, myC) || !isInside(oppR, oppC)) return;
+
+        // 보드 값(1 / -1) 교환
+        int tmp = board[myR][myC];
+        board[myR][myC] = board[oppR][oppC];
+        board[oppR][oppC] = tmp;
+
+        // 공용돌 플래그도 함께 교환 (혹시 나중에 공용돌과 섞여 쓸 수도 있으니까)
+        boolean tmpShared = sharedStones[myR][myC];
+        sharedStones[myR][myC] = sharedStones[oppR][oppC];
+        sharedStones[oppR][oppC] = tmpShared;
+
+        // 이미지 갱신
+        refreshStoneImage(myR, myC);
+        refreshStoneImage(oppR, oppC);
+
+        System.out.println("[GameBoard] Swap 적용: (" + myR + "," + myC + ") <-> (" + oppR + "," + oppC + ")");
+
+        // 교환 후 양쪽 모두 5목 체크
+        checkWinAfterSwap(myR, myC, oppR, oppC);
+    }
+
+    /** 한 칸의 이미지를 현재 board / sharedStones 상태에 맞게 다시 그린다. */
+    private void refreshStoneImage(int r, int c) {
+        ImageView iv = stoneViews[r][c];
+        if (iv == null) return;
+
+        try {
+            if (sharedStones[r][c]) {
+                Image sharedImg = new Image(
+                        getClass().getResource("/images/cards/shared_stone.png").toExternalForm()
+                );
+                iv.setImage(sharedImg);
+                return;
+            }
+
+            int sign = board[r][c];
+            String path = null;
+            if (sign == mySign) {
+                path = myStonePath;
+            } else if (sign == opponentSign) {
+                path = opponentStonePath;
+            }
+
+            if (path == null) return;
+
+            Image img = new Image(getClass().getResource(path).toExternalForm());
+            iv.setImage(img);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Swap 후 승리 여부를 검사한다. (위 유저=1, 아래 유저=-1 기준) */
+    private void checkWinAfterSwap(int r1, int c1, int r2, int c2) {
+        int[] signs = {1, -1}; // 보드 기준: 위/아래
+
+        for (int sign : signs) {
+            if (checkWin(r1, c1, sign) || checkWin(r2, c2, sign)) {
+                onGameOver(sign);
+                return;
+            }
+        }
+    }
+
+    /**
+     * 서버에서 "상대가 Swap 카드를 사용했다"는 알림을 받았을 때 호출.
+     * - 중앙에 안내 오버레이(SwapNotice)를 띄움.
+     */
+    public void onSwapStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 Swap 카드를 사용했습니다.");
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/SwapNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 서버에서 "SWAP_TARGET myR myC oppR oppC"를 받았을 때 호출.
+     * - 내 보드에도 동일한 위치 교환을 적용.
+     * - 상대가 카드를 사용한 것이므로, 이제 내 턴으로 넘어옴.
+     */
+    public void onSwapTargetFromOpponent(int myR, int myC, int oppR, int oppC) {
+        System.out.println("[GameBoard] 서버로부터 Swap 타겟 좌표 수신: "
+                + "(" + myR + "," + myC + ") <-> (" + oppR + "," + oppC + ")");
+
+        applySwapStones(myR, myC, oppR, oppC);
+
         if (!gameEnded) {
             endTurnAfterCardUse();
         }
