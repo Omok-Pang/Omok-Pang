@@ -126,9 +126,17 @@ public class GameIntroController {
 
                 @Override
                 public void sendSharedStoneTarget(int row, int col) {
-                    // SharedStone 타겟 좌표 전송
-                    // 예: SHARED_STONE_TARGET r c
                     client.send("SHARED_STONE_TARGET " + row + " " + col);
+                }
+
+                @Override
+                public void sendBombStart() {
+                    client.send("BOMB_START");
+                }
+
+                @Override
+                public void sendBombTarget(int row, int col) {
+                    client.send("BOMB_TARGET " + row + " " + col);
                 }
             });
 
@@ -165,6 +173,18 @@ public class GameIntroController {
                                 int r = Integer.parseInt(parts[1]);
                                 int c = Integer.parseInt(parts[2]);
                                 controller.onSharedStoneTargetFromOpponent(r, c);
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    } else if (line.startsWith("BOMB_START")) {
+                        // 상대가 Bomb!! 카드 사용 시작
+                        controller.onBombStartFromOpponent();
+                    } else if (line.startsWith("BOMB_TARGET")) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            try {
+                                int r = Integer.parseInt(parts[1]);
+                                int c = Integer.parseInt(parts[2]);
+                                controller.onBombTargetFromOpponent(r, c);
                             } catch (NumberFormatException ignored) {}
                         }
                     }

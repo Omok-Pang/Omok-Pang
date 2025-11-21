@@ -157,6 +157,27 @@ public class GameServer {
                     continue;
                 }
 
+                // 🔥 Bomb 시작: BOMB_START
+                if (line.startsWith("BOMB_START")) {
+                    if (nickname != null) {
+                        forwardBombStart(nickname);
+                    }
+                    continue;
+                }
+
+                // 🔥 Bomb 타겟: BOMB_TARGET r c
+                if (line.startsWith("BOMB_TARGET")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            int r = Integer.parseInt(parts[1]);
+                            int c = Integer.parseInt(parts[2]);
+                            forwardBombTarget(nickname, r, c);
+                        }
+                    }
+                    continue;
+                }
+
                 // 기타: 테스트용 에코
                 out.println("ECHO: " + line);
             }
@@ -199,4 +220,27 @@ public class GameServer {
             }
         }
     }
+
+    // Bomb!! 시작 알림
+    private static void forwardBombStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("BOMB_START");
+        }
+    }
+
+    // Bomb!! 타겟 좌표 전달
+    private static void forwardBombTarget(String from, int r, int c) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("BOMB_TARGET " + r + " " + c);
+        }
+    }
+
 }

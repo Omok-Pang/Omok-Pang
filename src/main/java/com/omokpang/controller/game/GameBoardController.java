@@ -5,9 +5,11 @@ import com.omokpang.controller.effect.SwapSelectGuideController;
 import com.omokpang.controller.effect.SwapNoticeController;
 import com.omokpang.controller.effect.SharedStoneGuideController;
 import com.omokpang.controller.effect.SharedStoneNoticeController;
+import com.omokpang.controller.effect.BombGuideController;
+import com.omokpang.controller.effect.BombNoticeController;
 
 import com.omokpang.domain.card.Card;
-import com.omokpang.session.MatchSession;   // 🔥 MatchSession 사용
+import com.omokpang.session.MatchSession;
 
 import com.omokpang.controller.result.ResultController;
 import javafx.scene.Parent;
@@ -69,6 +71,18 @@ public class GameBoardController {
     // 내 돌 / 상대 돌 이미지 경로 (sm_ 아이콘)
     private String myStonePath;
     private String opponentStonePath;
+
+    // ================== Swap / SharedStone / Bomb 카드 관련 상태 ==================
+    private SwapSelectGuideController swapGuideController;
+    private boolean swapSelecting = false;
+
+    // SharedStone
+    private boolean sharedStoneSelecting = false;
+    private SharedStoneGuideController sharedStoneGuideController;
+
+    // Bomb!!
+    private boolean bombSelecting = false;
+    private BombGuideController bombGuideController;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -159,14 +173,6 @@ public class GameBoardController {
             "망했팡...",
             "다음 판엔 이긴다팡"
     };
-
-    // ================== Swap / SharedStone 카드 관련 상태 ==================
-    private SwapSelectGuideController swapGuideController;
-    private boolean swapSelecting = false;
-
-    // SharedStone 선택 모드 여부
-    private boolean sharedStoneSelecting = false;
-    private SharedStoneGuideController sharedStoneGuideController;
 
     // ================== 외부에서 플레이어 배치 설정 ==================
     /**
@@ -405,6 +411,13 @@ public class GameBoardController {
 
     /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
     private void handleLocalClick(int r, int c) {
+
+        // ✅ Bomb 선택 모드인 경우: 3x3 제거용 클릭으로 사용
+        if (bombSelecting) {
+            handleBombTargetClick(r, c);
+            return;
+        }
+
         // ✅ SharedStone 선택 모드인 경우: 돌 두기 대신 "상대 돌 선택"으로 사용
         if (sharedStoneSelecting) {
             handleSharedStoneTargetClick(r, c);
@@ -779,11 +792,12 @@ public class GameBoardController {
         try {
             switch (selectedCard.getType()) {
                 case SHARED_STONE -> {
-                    // 공용돌 카드 사용
                     useSharedStoneCard();
                 }
+                case BOMB -> {
+                    useBombCard();
+                }
                 default -> {
-                    // TODO: 다른 카드 타입들(상대돌제거, 두번두기, 스왑, 타임락, 보호, 폭탄 등)은 여기서 처리
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
                 }
             }
@@ -870,6 +884,130 @@ public class GameBoardController {
         } else {
             // 가이드 없이 직접 처리
             onSharedStoneTargetChosenByMe(r, c);
+        }
+    }
+
+    // ================== Bomb!! 카드 로직 ==================
+
+    /** Bomb!! 카드 사용 시작 (내가 선택했을 때 호출) */
+    private void useBombCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 Bomb 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] Bomb!! 카드 사용!");
+
+        // 서버에 시작 알림
+        if (networkClient != null) {
+            networkClient.sendBombStart();
+        }
+
+        enterBombSelectMode();
+    }
+
+    /** 3×3 제거 구역 선택 모드 진입 */
+    private void enterBombSelectMode() {
+        bombSelecting = true;
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/BombGuide.fxml")
+            );
+            StackPane overlay = loader.load();
+            bombGuideController = loader.getController();
+
+            bombGuideController.setOnAreaSelected((row, col) -> {
+                onBombAreaChosenByMe(row, col);
+            });
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Bomb 선택 모드에서 보드를 클릭했을 때 */
+    private void handleBombTargetClick(int r, int c) {
+        if (!isInside(r, c)) return;
+
+        if (bombGuideController != null) {
+            bombGuideController.notifyAreaSelected(r, c);
+        } else {
+            onBombAreaChosenByMe(r, c);
+        }
+    }
+
+    /** 내가 최종 3×3 중심 좌표를 고른 경우 */
+    private void onBombAreaChosenByMe(int r, int c) {
+        bombSelecting = false;
+
+        applyBombArea(r, c);
+
+        if (networkClient != null) {
+            networkClient.sendBombTarget(r, c);
+        }
+
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    /**
+     * (r,c)를 중심으로 하는 3×3 영역의 돌을 모두 제거한다.
+     *  - 최소 0개 ~ 최대 9개 제거
+     */
+    private void applyBombArea(int centerR, int centerC) {
+        int removed = 0;
+
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int r = centerR + dr;
+                int c = centerC + dc;
+
+                if (!isInside(r, c)) continue;
+                if (board[r][c] == 0) continue;
+
+                ImageView stone = stoneViews[r][c];
+                if (stone != null) {
+                    boardRoot.getChildren().remove(stone);
+                }
+
+                board[r][c] = 0;
+                stoneViews[r][c] = null;
+                sharedStones[r][c] = false;
+                removed++;
+            }
+        }
+
+        System.out.println("[GameBoard] Bomb!! 적용: " + removed + "개 제거 (center=" + centerR + "," + centerC + ")");
+    }
+
+    /** 서버에서 '상대가 Bomb!! 카드를 사용했다' 알림을 받았을 때 */
+    public void onBombStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 Bomb!! 카드를 사용했습니다.");
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/BombNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+            BombNoticeController controller = loader.getController();
+            // 별도 데이터 전달 없음
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** 서버에서 'BOMB_TARGET r c' 를 받았을 때 */
+    public void onBombTargetFromOpponent(int r, int c) {
+        System.out.println("[GameBoard] Bomb!! 타겟 좌표 수신: (" + r + "," + c + ")");
+        applyBombArea(r, c);
+
+        if (!gameEnded) {
+            endTurnAfterCardUse();
         }
     }
 
@@ -1017,9 +1155,12 @@ public class GameBoardController {
         void sendCheer(String msg);
         void sendPlace(int row, int col);
 
-        // ✅ SharedStone 카드 네트워크용 메서드 추가
-        void sendSharedStoneStart();           // 내가 SharedStone 사용 시작
-        void sendSharedStoneTarget(int row, int col); // 내가 공용돌로 만든 타겟 좌표
+        void sendSharedStoneStart();
+        void sendSharedStoneTarget(int row, int col);
+
+        // 🔥 Bomb!!
+        void sendBombStart();
+        void sendBombTarget(int row, int col);
     }
 
     private NetworkClient networkClient;
