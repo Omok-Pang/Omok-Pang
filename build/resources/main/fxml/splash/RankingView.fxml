@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.splash.RankingController"
+            prefWidth="750" prefHeight="600">
+
+    <!-- 배경 -->
+    <ImageView fitWidth="750" fitHeight="600" preserveRatio="false"
+               AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
+               AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0">
+        <image>
+            <Image url="@/images/bg_darkmode.png"/>
+        </image>
+    </ImageView>
+
+    <!-- 순위 박스 -->
+    <VBox alignment="TOP_CENTER"
+          spacing="20"
+          AnchorPane.leftAnchor="80"
+          AnchorPane.rightAnchor="80"
+          AnchorPane.topAnchor="40"
+          AnchorPane.bottomAnchor="40"
+          style="-fx-background-color: rgba(255,255,255,0.85);
+                 -fx-background-radius: 30;
+                 -fx-padding: 20;
+                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0.2, 0, 5);">
+
+        <!-- ⭐ 전체 유저 순위 이미지 타이틀 -->
+        <ImageView
+                fx:id="imgRankingTitle"
+                fitWidth="250"
+                preserveRatio="true"
+                AnchorPane.topAnchor="40"
+                AnchorPane.leftAnchor="250">
+            <image>
+                <Image url="/images/main/Ranking.png"/>
+            </image>
+        </ImageView>
+
+
+        <!-- 스크롤 가능한 영역 -->
+        <ScrollPane fitToWidth="true"
+                    style="-fx-background-color: transparent;"
+                    prefHeight="450">
+            <VBox fx:id="rankingList"
+                  spacing="15"
+                  alignment="TOP_CENTER"
+                  style="-fx-padding: 10;"/>
+        </ScrollPane>
+
+    </VBox>
+
+    <!-- 🔙 뒤로가기 버튼 -->
+    <Button fx:id="btnBack"
+            text="뒤로가기"
+            onAction="#handleBack"
+            AnchorPane.leftAnchor="20"
+            AnchorPane.topAnchor="20"
+            style="
+            -fx-font-size: 18px;
+            -fx-background-radius: 12;
+            -fx-padding: 8 18;
+            -fx-background-color: #ffffffaa;
+            -fx-text-fill: black;
+            -fx-font-weight: bold;
+        "/>
+
+
+</AnchorPane>

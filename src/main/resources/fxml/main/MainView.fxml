@@ -76,6 +76,17 @@
                        style="-fx-text-fill:#ffe08a; -fx-font-size:16; -fx-font-weight:700;"/>
             </graphic>
         </Button>
+
+        <!-- ⭐ 순위 보기 버튼 -->
+        <Button fx:id="rankingBtn"
+                onAction="#handleShowRanking"
+                style="-fx-background-color: transparent;">
+            <graphic>
+                <Label text="순위보기"
+                       style="-fx-text-fill:#a0e7ff; -fx-font-size:16; -fx-font-weight:700;"/>
+            </graphic>
+        </Button>
+
     </HBox>
 
     <!-- ====================== 개인전 / 팀전 텍스트 ====================== -->
