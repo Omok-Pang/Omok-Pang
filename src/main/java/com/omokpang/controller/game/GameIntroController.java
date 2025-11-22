@@ -149,6 +149,11 @@ public class GameIntroController {
                 public void sendSwapTarget(int myR, int myC, int oppR, int oppC) {
                     client.send("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
                 }
+
+                @Override
+                public void sendDoubleMoveStart() {
+                    client.send("DOUBLE_MOVE_START");
+                }
             });
 
             // 6) 서버 → GameBoard 방향 (메시지 수신 처리)
@@ -214,6 +219,9 @@ public class GameIntroController {
                                 controller.onSwapTargetFromOpponent(myR, myC, oppR, oppC);
                             } catch (NumberFormatException ignored) {}
                         }
+                    } else if (line.startsWith("DOUBLE_MOVE_START")) {
+                        // 상대가 DoubleMove 카드를 사용한 경우
+                        controller.onDoubleMoveStartFromOpponent();
                     }
                     // MATCH, ECHO 등은 다른 화면에서 처리
                 });

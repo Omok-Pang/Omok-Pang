@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  역할: 메인(개인전/팀전, 2·4인 선택, 규칙보기)
+  핵심기능: 모드/인원 선택 상태 유지 / 게임 시작 → 매칭 화면 이동
+-->
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.main.MainController"
+            prefWidth="750" prefHeight="600">
+
+    <!-- ====================== 배경 ====================== -->
+    <ImageView fitWidth="750" fitHeight="600"
+               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0">
+        <image>
+            <Image url="/images/bg_darkmode.png"/>
+        </image>
+    </ImageView>
+
+    <!-- ====================== 좌측 상단 로고 ====================== -->
+    <ImageView fitWidth="150" preserveRatio="true"
+               AnchorPane.leftAnchor="20" AnchorPane.topAnchor="20">
+        <image>
+            <Image url="/images/logo.png"/>
+        </image>
+    </ImageView>
+
+    <!-- ====================== 우측 상단 사용자 정보바 ====================== -->
+    <HBox spacing="14" alignment="CENTER_RIGHT"
+          AnchorPane.rightAnchor="20" AnchorPane.topAnchor="25">
+
+        <!-- ⭐ 포인트 -->
+        <HBox spacing="5" alignment="CENTER">
+            <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
+                <image>
+                    <Image url="/images/user/ic_star.png"/>
+                </image>
+            </ImageView>
+
+            <Label fx:id="labelPoint" text="0"
+                   style="-fx-text-fill:white; -fx-font-size:15; -fx-font-weight:700;"/>
+        </HBox>
+
+        <!-- 👑 승리 -->
+        <HBox spacing="5" alignment="CENTER">
+            <ImageView fitWidth="28" fitHeight="28" preserveRatio="true">
+                <image>
+                    <Image url="/images/user/ic_crown.png"/>
+                </image>
+            </ImageView>
+
+            <Label fx:id="labelWin" text="0"
+                   style="-fx-text-fill:white; -fx-font-size:15; -fx-font-weight:700;"/>
+        </HBox>
+
+        <!-- 프로필 + 닉네임 -->
+        <HBox spacing="8" alignment="CENTER">
+            <ImageView fx:id="imgProfile" fitWidth="28" preserveRatio="true">
+                <image>
+                    <Image url="/images/user/ic_profile.png"/>
+                </image>
+            </ImageView>
+
+            <Label fx:id="labelUsername" text="닉네임"
+                   style="-fx-text-fill:white; -fx-font-size:16; -fx-font-weight:700;"/>
+        </HBox>
+
+        <!-- 규칙보기 -->
+        <Button onAction="#handleShowRules" style="-fx-background-color: transparent;">
+            <graphic>
+                <Label text="규칙보기"
+                       style="-fx-text-fill:#ffe08a; -fx-font-size:16; -fx-font-weight:700;"/>
+            </graphic>
+        </Button>
+    </HBox>
+
+    <!-- ====================== 개인전 / 팀전 텍스트 ====================== -->
+    <Label text="개인전"
+           AnchorPane.leftAnchor="195" AnchorPane.topAnchor="140"
+           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
+
+    <Label text="팀전"
+           AnchorPane.leftAnchor="495" AnchorPane.topAnchor="140"
+           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
+
+    <!-- ====================== 개인전 이미지 버튼 ====================== -->
+    <Button fx:id="btnModeSolo"
+            onAction="#handleSelectSolo"
+            style="-fx-background-color: transparent;"
+            AnchorPane.leftAnchor="85" AnchorPane.topAnchor="190">
+        <graphic>
+            <ImageView fx:id="imgSolo" fitWidth="270" preserveRatio="true">
+                <image>
+                    <Image url="/images/main/single_gray.png"/>
+                </image>
+            </ImageView>
+        </graphic>
+    </Button>
+
+    <!-- ====================== 팀전 이미지 버튼 ====================== -->
+    <Button fx:id="btnModeTeam"
+            onAction="#handleSelectTeam"
+            style="-fx-background-color: transparent;"
+            AnchorPane.leftAnchor="380" AnchorPane.topAnchor="190">
+        <graphic>
+            <ImageView fx:id="imgTeam" fitWidth="260" preserveRatio="true">
+                <image>
+                    <Image url="/images/main/team_gray.png"/>
+                </image>
+            </ImageView>
+        </graphic>
+    </Button>
+
+    <!-- ====================== 2인 / 4인 버튼 ====================== -->
+    <Button fx:id="btnSize2"
+            onAction="#handleSelectSize2"
+            style="-fx-background-color: transparent;"
+            AnchorPane.leftAnchor="83" AnchorPane.topAnchor="348">
+        <graphic>
+            <ImageView fx:id="imgSize2" fitWidth="132" preserveRatio="true">
+                <image>
+                    <Image url="/images/main/2p_gray.png"/>
+                </image>
+            </ImageView>
+        </graphic>
+    </Button>
+
+    <Button fx:id="btnSize4"
+            onAction="#handleSelectSize4"
+            style="-fx-background-color: transparent;"
+            AnchorPane.leftAnchor="220" AnchorPane.topAnchor="348">
+        <graphic>
+            <ImageView fx:id="imgSize4" fitWidth="132" preserveRatio="true">
+                <image>
+                    <Image url="/images/main/4p_gray.png"/>
+                </image>
+            </ImageView>
+        </graphic>
+    </Button>
+
+    <!-- ====================== 게임 시작 버튼 ====================== -->
+    <Button fx:id="btnStartGame"
+            onAction="#handleStartGame"
+            style="-fx-background-color: transparent;"
+            AnchorPane.bottomAnchor="40" AnchorPane.leftAnchor="275">
+        <graphic>
+            <ImageView fitWidth="200" preserveRatio="true">
+                <image>
+                    <Image url="/images/button/btn_gamestartbtn.png"/>
+                </image>
+            </ImageView>
+        </graphic>
+    </Button>
+
+</AnchorPane>

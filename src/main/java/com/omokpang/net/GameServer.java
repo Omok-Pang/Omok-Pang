@@ -208,6 +208,14 @@ public class GameServer {
                     continue;
                 }
 
+                // 🔥 DoubleMove 시작: DOUBLE_MOVE_START
+                if (line.startsWith("DOUBLE_MOVE_START")) {
+                    if (nickname != null) {
+                        forwardDoubleMoveStart(nickname);
+                    }
+                    continue;
+                }
+
                 // 기타: 테스트용 에코
                 out.println("ECHO: " + line);
             }
@@ -303,6 +311,17 @@ public class GameServer {
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
             outOpp.println("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
+        }
+    }
+
+    // DoubleMove 시작 알림: from -> 그의 상대에게만
+    private static void forwardDoubleMoveStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("DOUBLE_MOVE_START");
         }
     }
 

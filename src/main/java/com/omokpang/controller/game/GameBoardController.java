@@ -7,6 +7,7 @@ import com.omokpang.controller.effect.SharedStoneGuideController;
 import com.omokpang.controller.effect.SharedStoneNoticeController;
 import com.omokpang.controller.effect.BombGuideController;
 import com.omokpang.controller.effect.BombNoticeController;
+import com.omokpang.controller.effect.DoubleMoveNoticeController;
 
 import com.omokpang.domain.card.Card;
 import com.omokpang.session.MatchSession;
@@ -84,6 +85,9 @@ public class GameBoardController {
     // Bomb!!
     private boolean bombSelecting = false;
     private BombGuideController bombGuideController;
+
+    // DoubleMove: 현재 턴 플레이어에게 남아 있는 추가 수(한 번 사용 시 1)
+    private int doubleMoveExtraMoves = 0;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -491,7 +495,7 @@ public class GameBoardController {
 
         boardRoot.getChildren().add(stone);
 
-        // 현재 턴의 플레이어(current)가 (r,c) 에 둔 것
+        // 현재 턴의 플레이어(current)가 (r,c)에 둔 것
         board[r][c] = current;
         stoneViews[r][c] = stone;
 
@@ -501,7 +505,21 @@ public class GameBoardController {
             return;                // 더 이상 턴 전환 X
         }
 
-        // 승리 아니면 턴 전환
+        // ✅ DoubleMove 처리
+        // 이 턴에 더블무브 추가 수가 남아 있으면,
+        // 턴을 넘기지 않고 같은 플레이어가 한 번 더 둘 수 있게 한다.
+        if (doubleMoveExtraMoves > 0) {
+            doubleMoveExtraMoves--;
+            System.out.println("[GameBoard] DoubleMove 적용: 남은 추가 수 = " + doubleMoveExtraMoves);
+
+            // current는 그대로 (같은 플레이어 차례 유지)
+            updateTurnLabel();              // 문구는 그대로지만 동기화 차원에서 호출
+            updateActivePlayerHighlight();  // 하이라이트도 유지
+            restartTimer();                 // 같은 플레이어 기준으로 타이머 리셋 (원하면 유지로 바꿔도 됨)
+            return;
+        }
+
+        // ✅ 더블무브 추가 수가 없으면 평소처럼 턴 전환
         current *= -1;
         updateTurnLabel();
         updateActivePlayerHighlight();
@@ -720,7 +738,10 @@ public class GameBoardController {
             timerLabel.setText(remain + "초");
 
             if (remain <= 0) {
-                // 시간 초과 → 턴 넘기기
+                // 시간 초과 → 이번 턴에 부여된 더블무브는 사라진다
+                doubleMoveExtraMoves = 0;
+
+                // 턴 넘기기
                 current *= -1;
                 updateTurnLabel();
                 updateActivePlayerHighlight();
@@ -842,6 +863,9 @@ public class GameBoardController {
                 }
                 case SWAP -> {
                     useSwapCard();
+                }
+                case DOUBLE_MOVE -> {
+                    useDoubleMoveCard();
                 }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
@@ -1213,6 +1237,9 @@ public class GameBoardController {
         // Swap
         void sendSwapStart();
         void sendSwapTarget(int myR, int myC, int oppR, int oppC);
+
+        // DoubleMove
+        void sendDoubleMoveStart();
     }
 
     private NetworkClient networkClient;
@@ -1440,4 +1467,67 @@ public class GameBoardController {
             endTurnAfterCardUse();
         }
     }
+
+    // ================== DoubleMove 카드 로직 ==================
+
+    /**
+     * DoubleMove 카드 사용 (내가 카드 선택했을 때 호출).
+     * - 이번 턴에 내가 돌을 한 번 더 둘 수 있게 한다.
+     * - 카드를 사용해도 턴을 바로 넘기지 않는다.
+     */
+    private void useDoubleMoveCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 DoubleMove 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] DoubleMove 카드 사용! 이 턴에 한 번 더 둘 수 있습니다.");
+
+        // 현재 턴 플레이어에게 추가 수 1회 부여
+        doubleMoveExtraMoves = 1;
+
+        // 나도 화면 아래쪽에 배너 띄우기
+        showDoubleMoveNotice("DOUBLE MOVE 사용! 이번 턴에 돌을 두 번 둘 수 있습니다.");
+
+        // 서버에 알림 (상대 화면에서도 안내 배너 + 동일한 doubleMove 설정)
+        if (networkClient != null) {
+            networkClient.sendDoubleMoveStart();
+        }
+
+        // 🔥 DoubleMove는 "돌 두기 강화"이기 때문에
+        // Swap / Bomb처럼 턴을 즉시 끝내지 않는다.
+    }
+
+    /**
+     * 서버에서 "상대가 DoubleMove 카드를 사용했다"는 알림을 받았을 때 호출.
+     * - 이번 턴의 플레이어(상대)에게 추가 수 1회 부여.
+     * - 하단 안내 배너(DoubleMoveNotice)를 띄운다.
+     */
+    public void onDoubleMoveStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 DoubleMove 카드를 사용했습니다.");
+
+        // 현재 턴은 상대이므로, 그 플레이어에게 추가 수 1회를 부여
+        doubleMoveExtraMoves = 1;
+
+        // 내 화면에도 "상대가 두 번 둔다"는 배너를 아래쪽에 띄우기
+        showDoubleMoveNotice("상대가 DOUBLE MOVE 카드를 사용했습니다.\n이번 턴에 상대가 돌을 두 번 둡니다.");
+    }
+
+    /** DoubleMove용 안내 배너를 화면 아래쪽에 띄우는 공통 메서드 */
+    private void showDoubleMoveNotice(String message) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/DoubleMoveNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+
+            DoubleMoveNoticeController controller = loader.getController();
+            controller.setMessage(message);
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
