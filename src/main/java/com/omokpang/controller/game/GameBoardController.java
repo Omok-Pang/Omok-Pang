@@ -10,6 +10,10 @@ import com.omokpang.controller.effect.BombNoticeController;
 import com.omokpang.controller.effect.DoubleMoveNoticeController;
 import com.omokpang.controller.effect.RemoveGuideController;
 import com.omokpang.controller.effect.RemoveNoticeController;
+import com.omokpang.controller.effect.ShieldNoticeController;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 import com.omokpang.domain.card.Card;
 import com.omokpang.session.MatchSession;
@@ -41,6 +45,10 @@ import java.util.List;
  *  - 위/아래(좌/우) 플레이어 아바타 표시
  *  - MatchSession에서 아바타/닉네임/카드 정보를 가져와 배치
  *  - 돌 두기 / 턴 전환 / 타이머 / 말풍선 / 카드 효과 처리
+ *
+ *  🔥 변경점: 턴은 서버가 관리한다.
+ *   - 내 턴이 끝나면 TURN_END 를 서버로 보냄
+ *   - 서버가 TURN <nickname> 을 브로드캐스트 → onTurnFromServer(...)에서 반영
  */
 public class GameBoardController {
 
@@ -65,15 +73,23 @@ public class GameBoardController {
     private String topStonePath = "/images/user/sm_user1.png";
     private String bottomStonePath = "/images/user/sm_user2.png";
 
-    // ---- 내/상대 턴 정보 (1 = 선공, -1 = 후공) ----
-    /** 나는 선공(1)인지 후공(-1)인지 */
+    // ---- 내/상대 정보 ----
+    /** 나는 선공(1)인지 후공(-1)인지 (first / second) */
     private int mySign = 1;
     /** 상대는 항상 나의 반대 */
     private int opponentSign = -1;
 
+    /** 내가 선공인지 여부 (players[0] == me) */
+    private boolean iAmFirst = false;
+
     // 내 돌 / 상대 돌 이미지 경로 (sm_ 아이콘)
     private String myStonePath;
     private String opponentStonePath;
+
+    // 현재 턴을 가진 플레이어 닉네임(서버 기준)
+    private String currentTurnNickname = null;
+    // 이 클라이언트 기준: 지금이 내 턴인지 여부
+    private boolean myTurn = false;
 
     // ================== Swap / SharedStone / Bomb 카드 관련 상태 ==================
     private SwapSelectGuideController swapGuideController;
@@ -88,12 +104,19 @@ public class GameBoardController {
     private boolean bombSelecting = false;
     private BombGuideController bombGuideController;
 
-    // DoubleMove: 현재 턴 플레이어에게 남아 있는 추가 수(한 번 사용 시 1)
-    private int doubleMoveExtraMoves = 0;
+    // 한 턴에 남아 있는 수 (기본 1, DoubleMove 사용 시 2)
+    private int movesLeftInCurrentTurn = 1;
 
     // Remove (상대 돌 1개 제거)
     private boolean removeSelecting = false;
     private RemoveGuideController removeGuideController;
+
+    // Shield (자동 발동 방어 카드)
+    private boolean hasShieldCard = false;
+
+    // Shield 로 인해 공격 효과를 무시해야 하는지 플래그
+    private boolean shieldBlockRemovePending = false;
+    private boolean shieldBlockSwapPending = false;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -144,7 +167,7 @@ public class GameBoardController {
     private static final double SIZE = 360;     // 보드 한 변 길이(px)
     private static final double CELL = SIZE / (N - 1); // 한 칸(격자 간격) 크기
 
-    // 보드 상태: 0=빈칸, 1=위 유저의 돌, -1=아래 유저의 돌
+    // 보드 상태: 0=빈칸, 1=선공 돌, -1=후공 돌
     private final int[][] board = new int[N][N];
 
     // 게임이 이미 끝났는지 여부 (카드 사용 후 중복 턴 전환 방지)
@@ -156,9 +179,6 @@ public class GameBoardController {
     // 공용돌(SharedStone) 여부 표시
     private final boolean[][] sharedStones = new boolean[N][N];
 
-    // 현재 턴(누가 둘 차례인지): 1=위 유저, -1=아래 유저
-    private int current = 1;
-
     // ================== 타이머 관련 ==================
     private static final int DEFAULT_TURN_SECONDS = 20; // 기본 턴 시간
     private static final int TIMELOCK_TURN_SECONDS = 3; // Time Lock 적용 시 턴 시간
@@ -166,8 +186,8 @@ public class GameBoardController {
     private Timeline timer;   // 1초마다 동작하는 타이머
     private int remain = DEFAULT_TURN_SECONDS;  // 남은 시간(초)
 
-    /** Time Lock 카드가 적용될 플레이어의 sign (1 또는 -1, 0이면 효과 없음) */
-    private int timeLockTargetSign = 0;
+    /** Time Lock 카드로 인해 "내 다음 턴"이 3초 제한인지 여부 */
+    private boolean timeLockNextTurn = false;
 
     // ================== 프리셋 말풍선 텍스트 ==================
     private static final String[] PRESET_MESSAGES = {
@@ -262,11 +282,24 @@ public class GameBoardController {
             handleLocalClick(r, c);
         });
 
-        // 말풍선 리스트, 턴 정보, 타이머 시작
+        // 말풍선 리스트
         setupMessageList();
-        updateTurnLabel();
-        updateActivePlayerHighlight();
-        startTurn();
+
+        // 🔥 서버 턴 관리와 동기화: 처음 선공은 players[0]
+        String[] players = MatchSession.getPlayers();
+        String me = MatchSession.getMyNickname();
+        if (players != null && players.length >= 2 && me != null) {
+            currentTurnNickname = players[0];        // 선공 닉네임
+            // 초기 턴을 직접 세팅 (서버도 같은 상태를 내부적으로 유지)
+            onTurnFromServer(currentTurnNickname);   // TURN players[0] 과 동일 처리
+        } else {
+            // 세션 정보가 없으면 일단 내 턴 아님
+            myTurn = false;
+            updateTurnLabel();
+            updateActivePlayerHighlight();
+            stopTimer();
+            timerLabel.setText("");
+        }
     }
 
     /**
@@ -298,8 +331,9 @@ public class GameBoardController {
         int oppIndex = (myIndex == 0) ? 1 : 0;
 
         // 2) 선공/후공 결정: players[0] 이 선공이라고 가정
-        boolean iAmFirst = players[0].equals(me);
-        mySign = iAmFirst ? 1 : -1;
+        boolean iAmFirstLocal = players[0].equals(me);
+        this.iAmFirst = iAmFirstLocal;
+        mySign = iAmFirstLocal ? 1 : -1;
         opponentSign = -mySign;
 
         // 3) 아바타 경로
@@ -418,9 +452,9 @@ public class GameBoardController {
         boardRoot.getChildren().addAll(b1, b2, b3, b4);
     }
 
-    /** 내 턴인지 여부 공통 체크 */
+    /** 지금이 내 턴인지 여부 (서버 기준 턴 + 내 닉네임 비교 결과) */
     private boolean isMyTurn() {
-        return current == mySign;
+        return myTurn;
     }
 
     /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
@@ -451,9 +485,7 @@ public class GameBoardController {
         }
 
         // ✅ 일반 돌 두기: 내 턴인지 확인
-        boolean myTurn = isMyTurn();
-
-        if (!myTurn) {
+        if (!isMyTurn()) {
             return; // 내 턴 아니면 무시
         }
 
@@ -468,6 +500,14 @@ public class GameBoardController {
         if (networkClient != null) {
             networkClient.sendPlace(r, c);
         }
+
+        // 승리로 게임이 끝났다면 더 이상 처리 X
+        if (gameEnded) return;
+
+        // 한 턴에 남은 수가 없으면 (기본 1번, DoubleMove면 2번) → 내 턴 종료
+        if (movesLeftInCurrentTurn <= 0 && !gameEnded) {
+            endMyTurn();
+        }
     }
 
     /** 상대방으로부터 온 PLACE r c 처리 */
@@ -476,15 +516,22 @@ public class GameBoardController {
             return;
         }
         applyPlace(r, c);
+        // 상대가 둔 수에 대해서는 이쪽에서 TURN_END 를 보내지 않는다.
     }
 
-    /** 실제 돌 그리기 + 승리 검사 + 턴 전환 공통 로직 */
+    /**
+     * 실제 돌 그리기 + 승리 검사 + 한 턴에 둘 수 있는 수(movesLeftInCurrentTurn) 차감
+     */
     private void applyPlace(int r, int c) {
         double cx = c * CELL;
         double cy = r * CELL;
 
-        // 지금 두는 사람이 나인지 / 상대인지에 따라 돌 이미지 선택
-        String stonePath = (current == mySign) ? myStonePath : opponentStonePath;
+        String me = MatchSession.getMyNickname();
+        boolean isMineNow = (currentTurnNickname != null && currentTurnNickname.equals(me));
+
+        // 현재 턴을 가진 플레이어 기준으로 sign / 이미지 결정
+        int sign = isMineNow ? mySign : opponentSign;
+        String stonePath = isMineNow ? myStonePath : opponentStonePath;
 
         // 🔥 안전장치: 경로가 잘못되면 기본 돌로 대체 (NPE 방지)
         java.net.URL url = getClass().getResource(stonePath);
@@ -507,35 +554,18 @@ public class GameBoardController {
 
         boardRoot.getChildren().add(stone);
 
-        // 현재 턴의 플레이어(current)가 (r,c)에 둔 것
-        board[r][c] = current;
+        // 현재 턴의 플레이어가 (r,c)에 둔 것
+        board[r][c] = sign;
         stoneViews[r][c] = stone;
 
         // ✅ 여기서 5목 승리 여부 검사
-        if (checkWin(r, c, current)) {
-            onGameOver(current);   // current가 이긴 사람의 sign(1 또는 -1)
-            return;                // 더 이상 턴 전환 X
+        if (checkWin(r, c, sign)) {
+            onGameOver(sign);   // sign이 이긴 사람의 sign(1 또는 -1)
+            return;             // 턴/타이머 처리는 onGameOver에서
         }
 
-        // ✅ DoubleMove 처리
-        // 이 턴에 더블무브 추가 수가 남아 있으면,
-        // 턴을 넘기지 않고 같은 플레이어가 한 번 더 둘 수 있게 한다.
-        if (doubleMoveExtraMoves > 0) {
-            doubleMoveExtraMoves--;
-            System.out.println("[GameBoard] DoubleMove 적용: 남은 추가 수 = " + doubleMoveExtraMoves);
-
-            // current는 그대로 (같은 플레이어 차례 유지)
-            updateTurnLabel();              // 문구는 그대로지만 동기화 차원에서 호출
-            updateActivePlayerHighlight();  // 하이라이트도 유지
-            restartTimer();                 // 같은 플레이어 기준으로 타이머 리셋 (원하면 유지로 바꿔도 됨)
-            return;
-        }
-
-        // ✅ 더블무브 추가 수가 없으면 평소처럼 턴 전환
-        current *= -1;
-        updateTurnLabel();
-        updateActivePlayerHighlight();
-        restartTimer();
+        // 한 턴에 둘 수 있는 수 감소 (기본 1, DoubleMove 시 2)
+        movesLeftInCurrentTurn--;
     }
 
     /** 마지막에 (r,c)에 둔 sign(1 또는 -1)이 5목인지 검사 */
@@ -566,7 +596,7 @@ public class GameBoardController {
         return cnt;
     }
 
-    /** 승패가 결정되었을 때 호출: winnerSign = 1(위) 또는 -1(아래) */
+    /** 승패가 결정되었을 때 호출: winnerSign = 1 또는 -1 */
     private void onGameOver(int winnerSign) {
         // 이미 끝난 뒤에 또 호출되는 것 방지
         if (gameEnded) return;
@@ -583,12 +613,21 @@ public class GameBoardController {
         openResultScene(iWon);
     }
 
-    /** 카드 사용으로 턴이 끝났을 때 공통 처리 */
-    private void endTurnAfterCardUse() {
-        current *= -1;                    // 턴 전환
-        updateTurnLabel();                // "내 턴 / 상대 턴" 텍스트 갱신
-        updateActivePlayerHighlight();    // 아바타 테두리 하이라이트 갱신
-        restartTimer();                   // 다음 턴 타이머 시작
+    /** 내 턴을 종료하고 서버에 TURN_END 전송 (서버가 턴을 넘긴다) */
+    private void endMyTurn() {
+        if (!isMyTurn()) return;
+        if (gameEnded) return;
+
+        System.out.println("[GameBoard] endMyTurn() 호출 - TURN_END 전송");
+
+        stopTimer();
+        myTurn = false;
+        updateTurnLabel();
+        updateActivePlayerHighlight();
+
+        if (networkClient != null) {
+            networkClient.sendTurnEnd();
+        }
     }
 
     /** 결과 화면(ResultView) FXML 로드 + ResultController에 데이터 전달 (모달 오버레이) */
@@ -643,9 +682,6 @@ public class GameBoardController {
             overlay.setMouseTransparent(false);   // 아래 클릭 막기
             centerStack.getChildren().add(overlay);
 
-            // (보드는 이미 onGameOver에서 클릭 막았으므로 추가 조치는 선택 사항)
-            // boardRoot.setMouseTransparent(true);
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -679,9 +715,9 @@ public class GameBoardController {
                         "-fx-border-width: 4;" +
                         "-fx-border-radius: 999;";
 
-        boolean myTurn = isMyTurn();
+        boolean myTurnNow = isMyTurn();
 
-        if (myTurn) {
+        if (myTurnNow) {
             // ✅ 내 턴이면 아래(나)를 강조
             bottomPlayerContainer.setStyle(activeStyle);
             topPlayerContainer.setStyle(inactiveStyle);
@@ -693,9 +729,9 @@ public class GameBoardController {
 
     /** 상단 텍스트로 "내 턴 / 상대 턴" 표시 */
     private void updateTurnLabel() {
-        boolean myTurn = isMyTurn();
+        boolean myTurnNow = isMyTurn();
 
-        if (myTurn) {
+        if (myTurnNow) {
             turnLabel.setText("내 턴 (아래 유저)");
         } else {
             turnLabel.setText("상대 턴 (위 유저)");
@@ -703,15 +739,39 @@ public class GameBoardController {
     }
 
     // ================== 턴 타이머 로직 ==================
+    /** 서버로부터 "TURN <nickname>" 을 받았을 때 호출 */
+    public void onTurnFromServer(String nickname) {
+        System.out.println("[GameBoard] onTurnFromServer: " + nickname);
+        this.currentTurnNickname = nickname;
+
+        String me = MatchSession.getMyNickname();
+        this.myTurn = (me != null && me.equals(nickname));
+
+        if (myTurn) {
+            // 내 턴 시작: 타이머 / movesLeft 초기화
+            startTurn();
+        } else {
+            // 상대 턴: 이 클라이언트에서는 타이머 정지 (원하면 상대 턴 타이머도 그릴 수 있음)
+            stopTimer();
+            movesLeftInCurrentTurn = 1;
+            timerLabel.setText("");
+        }
+
+        updateTurnLabel();
+        updateActivePlayerHighlight();
+    }
+
+    /** 내 턴 시작 (서버 TURN 메시지 기준) */
     private void startTurn() {
         int seconds = DEFAULT_TURN_SECONDS;
 
-        // Time Lock 카드가 걸려 있고, 이번 턴의 플레이어 sign이 대상이면 3초로 제한
-        if (timeLockTargetSign != 0 && current == timeLockTargetSign) {
+        // Time Lock 카드로 인해 "이번 내 턴"이 3초 제한이면
+        if (timeLockNextTurn) {
             seconds = TIMELOCK_TURN_SECONDS;
-            // 한 턴만 효과 → 첫 적용 후 바로 초기화
-            timeLockTargetSign = 0;
+            timeLockNextTurn = false;  // 한 번만 적용
         }
+
+        movesLeftInCurrentTurn = 1; // 기본 1수 (DoubleMove 카드 사용 시 2로 변경)
 
         startTurnWithSeconds(seconds);
     }
@@ -725,17 +785,15 @@ public class GameBoardController {
 
         System.out.println("[GameBoard] Time Lock 카드 사용!");
 
-        // 다음 턴에 "상대(sign = opponentSign)"의 제한시간을 3초로 줄인다.
-        timeLockTargetSign = opponentSign;
-
-        // 서버에 Time Lock 사용 시작 알림
+        // 다음 턴에 "상대"의 제한시간을 3초로 줄인다.
+        // → 상대 클라이언트에서 onTimeLockStartFromOpponent()에서 timeLockNextTurn = true 로 세팅
         if (networkClient != null) {
             networkClient.sendTimeLockStart();
         }
 
-        // 다른 공격 카드와 동일하게, 카드를 사용하면 내 턴은 종료
+        // 이 카드를 사용하면 내 턴은 종료
         if (!gameEnded) {
-            endTurnAfterCardUse();
+            endMyTurn();
         }
     }
 
@@ -750,23 +808,19 @@ public class GameBoardController {
             timerLabel.setText(remain + "초");
 
             if (remain <= 0) {
-                // 시간 초과 → 이번 턴에 부여된 더블무브는 사라진다
-                doubleMoveExtraMoves = 0;
+                timer.stop();
+                timerLabel.setText("시간 초과");
 
-                // 턴 넘기기
-                current *= -1;
-                updateTurnLabel();
-                updateActivePlayerHighlight();
-                restartTimer();
+                // 시간 초과 → 남은 수는 0으로 간주하고 내 턴 종료
+                movesLeftInCurrentTurn = 0;
+
+                if (!gameEnded && isMyTurn()) {
+                    endMyTurn();
+                }
             }
         }));
         timer.setCycleCount(Timeline.INDEFINITE);
         timer.playFromStart();
-    }
-
-    private void restartTimer() {
-        stopTimer();
-        startTurn();
     }
 
     private void stopTimer() {
@@ -831,20 +885,25 @@ public class GameBoardController {
             return;
         }
 
+        // SHIELD 를 제외한 선택 가능한 카드만 모달에 넘김
+        List<Card> usableCards = getUsableCardsForModal();
+        if (usableCards.isEmpty()) {
+            System.out.println("[GameBoard] 선택 가능한 카드가 없어 모달을 띄우지 않습니다.");
+            return;
+        }
+
         try {
-            // ⚠️ FXML 경로는 실제 파일 이름에 맞게 수정해줘!
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/game/CardUseModal.fxml")
             );
             StackPane modalRoot = loader.load();
 
             CardUseModalController controller = loader.getController();
-            // 1) 내가 가진 카드 목록 전달
-            controller.setCards(receivedCards);
+            // 1) 내가 가진 카드 목록 전달 (SHIELD 제외)
+            controller.setCards(usableCards);
             // 2) 어떤 카드를 골랐는지 콜백으로 전달
             controller.setOnCardSelected(this::onCardSelectedFromModal);
 
-            // GameBoard 중앙 StackPane 위에 모달 추가 (ResultView랑 같은 방식)
             modalRoot.setMouseTransparent(false);   // 아래 클릭 막기
             centerStack.getChildren().add(modalRoot);
 
@@ -881,6 +940,9 @@ public class GameBoardController {
                 }
                 case REMOVE -> {
                     useRemoveCard();
+                }
+                case SHIELD -> {
+                    hasShieldCard = true;
                 }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
@@ -1033,7 +1095,7 @@ public class GameBoardController {
         }
 
         if (!gameEnded) {
-            endTurnAfterCardUse();
+            endMyTurn();
         }
     }
 
@@ -1089,10 +1151,7 @@ public class GameBoardController {
     public void onBombTargetFromOpponent(int r, int c) {
         System.out.println("[GameBoard] Bomb!! 타겟 좌표 수신: (" + r + "," + c + ")");
         applyBombArea(r, c);
-
-        if (!gameEnded) {
-            endTurnAfterCardUse();
-        }
+        // 턴 전환은 서버의 TURN 메시지로 처리
     }
 
     /** 해당 좌표의 돌이 주어진 sign(1 또는 -1)의 연속에 포함되는지 여부 */
@@ -1108,12 +1167,11 @@ public class GameBoardController {
         return false;
     }
 
-
     /**
      * 내가 SharedStone 타겟 좌표(r,c)를 최종 선택했을 때 호출.
      * - SharedStone 효과를 내 보드에 적용
      * - 서버에 (r,c) 전송
-     * - 이 턴은 "카드 사용"으로 끝 → 턴 전환
+     * - 이 턴은 "카드 사용"으로 끝 → 턴 종료
      */
     private void onSharedStoneTargetChosenByMe(int r, int c) {
         sharedStoneSelecting = false;
@@ -1126,9 +1184,9 @@ public class GameBoardController {
             networkClient.sendSharedStoneTarget(r, c);
         }
 
-        // 이미 승리해서 게임이 끝난 경우에는 턴 전환 X
+        // 이미 승리해서 게임이 끝난 경우에는 턴 종료 X
         if (!gameEnded) {
-            endTurnAfterCardUse();
+            endMyTurn();
         }
     }
 
@@ -1171,7 +1229,7 @@ public class GameBoardController {
 
     /**
      * 서버에서 "상대가 SharedStone 카드를 사용했다"는 이벤트를 받았을 때 호출.
-     * - SharedStoneNotice.fxml 오버레이를 띄워 3초 안내.
+     * - SharedStoneNotice.fxml 오버레이를 띄워 안내.
      */
     public void onSharedStoneStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 SharedStone 카드를 사용했습니다.");
@@ -1182,7 +1240,6 @@ public class GameBoardController {
             );
             StackPane overlay = loader.load();
             SharedStoneNoticeController controller = loader.getController();
-            // 별도 데이터 전달 필요 없으면 컨트롤러는 기본 initialize()만 사용
 
             centerStack.getChildren().add(overlay);
         } catch (IOException e) {
@@ -1193,44 +1250,57 @@ public class GameBoardController {
     /**
      * 서버에서 "SharedStone 타겟 좌표"를 전달받았을 때 호출.
      * - 내 보드에도 동일한 공용돌 효과 적용.
-     * - 상대가 카드를 사용한 것이므로, 이제 내 턴으로 넘어옴.
      */
     public void onSharedStoneTargetFromOpponent(int r, int c) {
         System.out.println("[GameBoard] 서버로부터 SharedStone 타겟 좌표 수신: (" + r + ", " + c + ")");
         applySharedStoneAt(r, c);
-
-        // SharedStone 때문에 누군가 바로 승리하면 gameEnded = true 상태라서 턴 전환 X
-        if (!gameEnded) {
-            endTurnAfterCardUse();
-        }
+        // 턴 전환은 서버의 TURN 메시지로 처리
     }
 
     // ================== 카드 슬롯 UI ==================
     /**
      * 카드 선택 화면에서 받은 카드 2장을 GameBoard에 표시하는 메서드.
      * - MatchSession에서 가져온 카드들을 UI 슬롯에 채운다.
+     * - SHIELD 카드는 자동발동 카드라서 슬롯에는 표시하지 않는다.
      */
     public void setReceivedCards(List<Card> cards) {
         this.receivedCards = cards;
 
-        if (cards == null || cards.isEmpty()) return;
-
-        // cardSlotBox 초기화
+        hasShieldCard = false;
         cardSlotBox.getChildren().clear();
 
+        if (cards == null || cards.isEmpty()) return;
+
         for (Card card : cards) {
-            ImageView iv = new ImageView(
-                    new Image(getClass().getResource(card.getImagePath()).toExternalForm())
-            );
+            if (card == null) continue;
 
-            iv.setFitWidth(40);
-            iv.setFitHeight(40);
-            iv.setPreserveRatio(true);
+            switch (card.getType()) {
+                case SHIELD -> {
+                    hasShieldCard = true;
 
-            // 카드마다 테두리 스타일
-            iv.setStyle("-fx-effect: dropshadow(gaussian, black, 4, 0, 0, 0);");
+                    // 방어카드도 모서리에 살짝 표시 (자동발동이지만 '있다'는 건 보여주기)
+                    ImageView iv = new ImageView(
+                            new Image(getClass().getResource(card.getImagePath()).toExternalForm())
+                    );
+                    iv.setFitWidth(40);
+                    iv.setFitHeight(40);
+                    iv.setPreserveRatio(true);
+                    iv.setOpacity(0.8); // 공격카드와 구분하고 싶으면 살짝 투명하게
+                    iv.setStyle("-fx-effect: dropshadow(gaussian, black, 4, 0, 0, 0);");
 
-            cardSlotBox.getChildren().add(iv);
+                    cardSlotBox.getChildren().add(iv);
+                }
+                default -> {
+                    ImageView iv = new ImageView(
+                            new Image(getClass().getResource(card.getImagePath()).toExternalForm())
+                    );
+                    iv.setFitWidth(40);
+                    iv.setFitHeight(40);
+                    iv.setPreserveRatio(true);
+                    iv.setStyle("-fx-effect: dropshadow(gaussian, black, 4, 0, 0, 0);");
+                    cardSlotBox.getChildren().add(iv);
+                }
+            }
         }
     }
 
@@ -1259,6 +1329,13 @@ public class GameBoardController {
         // Remove (상대 돌 제거)
         void sendRemoveStart();
         void sendRemoveTarget(int row, int col);
+
+        // Shield (자동 방어) – 공격 카드 무효화 알림
+        void sendShieldBlockForRemove();
+        void sendShieldBlockForSwap();
+
+        // 턴 종료 (서버가 턴을 넘기도록 요청)
+        void sendTurnEnd();
     }
 
     private NetworkClient networkClient;
@@ -1272,14 +1349,14 @@ public class GameBoardController {
 
     /**
      * 서버에서 "상대가 Time Lock 카드를 사용했다"는 알림을 받았을 때 호출.
-     * - 내 sign 에 대해 Time Lock 대상 설정
+     * - 내 다음 턴에 타이머를 3초로 세팅하기 위한 플래그 설정
      * - 하단 안내 오버레이(TimeLockNotice)를 띄움
-     * - 턴 전환 및 타이머 재시작 (상대가 카드를 사용하면 이제 내 턴 시작)
      */
     public void onTimeLockStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 Time Lock 카드를 사용했습니다.");
 
-        timeLockTargetSign = mySign;
+        // 내 "다음 턴"의 제한시간을 3초로 줄이는 플래그
+        timeLockNextTurn = true;
 
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -1291,10 +1368,7 @@ public class GameBoardController {
             e.printStackTrace();
         }
 
-        // 상대가 카드를 사용 → 내 턴으로 넘어오므로, 턴 전환 + 타이머 재시작
-        if (!gameEnded) {
-            endTurnAfterCardUse();
-        }
+        // 턴 전환은 서버에서 TURN 메시지를 통해 관리
     }
 
     // ================== Swap 카드 로직 ==================
@@ -1382,7 +1456,7 @@ public class GameBoardController {
 
         // 교환 결과로 누가 이겼을 수도 있으므로 gameEnded 여부 확인
         if (!gameEnded) {
-            endTurnAfterCardUse();
+            endMyTurn();
         }
     }
 
@@ -1441,9 +1515,9 @@ public class GameBoardController {
         }
     }
 
-    /** Swap 후 승리 여부를 검사한다. (위 유저=1, 아래 유저=-1 기준) */
+    /** Swap 후 승리 여부를 검사한다. */
     private void checkWinAfterSwap(int r1, int c1, int r2, int c2) {
-        int[] signs = {1, -1}; // 보드 기준: 위/아래
+        int[] signs = {1, -1};
 
         for (int sign : signs) {
             if (checkWin(r1, c1, sign) || checkWin(r2, c2, sign)) {
@@ -1460,6 +1534,12 @@ public class GameBoardController {
     public void onSwapStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 Swap 카드를 사용했습니다.");
 
+        // Shield 있으면 여기서 바로 막고 끝
+        if (hasShieldCard) {
+            handleShieldDefenseFromAttack("SWAP");
+            return;
+        }
+
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/effect/SwapNotice.fxml")
@@ -1474,24 +1554,27 @@ public class GameBoardController {
     /**
      * 서버에서 "SWAP_TARGET myR myC oppR oppC"를 받았을 때 호출.
      * - 내 보드에도 동일한 위치 교환을 적용.
-     * - 상대가 카드를 사용한 것이므로, 이제 내 턴으로 넘어옴.
      */
     public void onSwapTargetFromOpponent(int myR, int myC, int oppR, int oppC) {
         System.out.println("[GameBoard] 서버로부터 Swap 타겟 좌표 수신: "
                 + "(" + myR + "," + myC + ") <-> (" + oppR + "," + oppC + ")");
 
-        applySwapStones(myR, myC, oppR, oppC);
-
-        if (!gameEnded) {
-            endTurnAfterCardUse();
+        // Shield로 이미 방어한 공격이면 교환 무시
+        if (shieldBlockSwapPending) {
+            System.out.println("[GameBoard] Shield로 인해 Swap 효과 무시");
+            shieldBlockSwapPending = false;
+            return;
         }
+
+        applySwapStones(myR, myC, oppR, oppC);
+        // 턴 전환은 서버 TURN 메시지로 처리
     }
 
     // ================== DoubleMove 카드 로직 ==================
 
     /**
      * DoubleMove 카드 사용 (내가 카드 선택했을 때 호출).
-     * - 이번 턴에 내가 돌을 한 번 더 둘 수 있게 한다.
+     * - 이번 턴에 내가 돌을 한 번 더 둘 수 있게 한다 (총 2번).
      * - 카드를 사용해도 턴을 바로 넘기지 않는다.
      */
     private void useDoubleMoveCard() {
@@ -1500,35 +1583,34 @@ public class GameBoardController {
             return;
         }
 
-        System.out.println("[GameBoard] DoubleMove 카드 사용! 이 턴에 한 번 더 둘 수 있습니다.");
+        System.out.println("[GameBoard] DoubleMove 카드 사용! 이 턴에 두 번 둘 수 있습니다.");
 
-        // 현재 턴 플레이어에게 추가 수 1회 부여
-        doubleMoveExtraMoves = 1;
+        // 현재 턴 플레이어에게 총 2수 부여
+        movesLeftInCurrentTurn = 2;
 
         // 나도 화면 아래쪽에 배너 띄우기
         showDoubleMoveNotice("DOUBLE MOVE 사용! 이번 턴에 돌을 두 번 둘 수 있습니다.");
 
-        // 서버에 알림 (상대 화면에서도 안내 배너 + 동일한 doubleMove 설정)
+        // 서버에 알림 (상대 화면에서도 안내 배너 + 동일한 movesLeft 설정)
         if (networkClient != null) {
             networkClient.sendDoubleMoveStart();
         }
 
-        // 🔥 DoubleMove는 "돌 두기 강화"이기 때문에
-        // Swap / Bomb처럼 턴을 즉시 끝내지 않는다.
+        // DoubleMove는 "돌 두기 강화"이기 때문에 턴은 여기서 종료하지 않는다.
     }
 
     /**
      * 서버에서 "상대가 DoubleMove 카드를 사용했다"는 알림을 받았을 때 호출.
-     * - 이번 턴의 플레이어(상대)에게 추가 수 1회 부여.
+     * - 이번 턴의 플레이어(상대)에게 총 2수 부여.
      * - 하단 안내 배너(DoubleMoveNotice)를 띄운다.
      */
     public void onDoubleMoveStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 DoubleMove 카드를 사용했습니다.");
 
-        // 현재 턴은 상대이므로, 그 플레이어에게 추가 수 1회를 부여
-        doubleMoveExtraMoves = 1;
+        // 현재 턴은 상대이지만, 이 턴 전체가 2수로 확장되므로
+        movesLeftInCurrentTurn = 2;
 
-        // 내 화면에도 "상대가 두 번 둔다"는 배너를 아래쪽에 띄우기
+        // 내 화면에도 안내 배너를 띄우기
         showDoubleMoveNotice("상대가 DOUBLE MOVE 카드를 사용했습니다.\n이번 턴에 상대가 돌을 두 번 둡니다.");
     }
 
@@ -1597,7 +1679,7 @@ public class GameBoardController {
     private void handleRemoveTargetClick(int r, int c) {
         if (!isInside(r, c)) return;
 
-        // 상대 돌만 제거 가능
+        // 상대 돌만 제거 가능 (공용돌도 제거 가능)
         if (board[r][c] != opponentSign && !sharedStones[r][c]) {
             System.out.println("[GameBoard] Remove: 상대 돌이 아닌 곳을 클릭했습니다.");
             return;
@@ -1632,7 +1714,7 @@ public class GameBoardController {
         }
 
         if (!gameEnded) {
-            endTurnAfterCardUse();
+            endMyTurn();
         }
     }
 
@@ -1657,7 +1739,13 @@ public class GameBoardController {
     public void onRemoveStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 Remove 카드를 사용했습니다.");
 
-        // ✅ 상대가 Remove 사용 → 내 돌이 제거될 것이라는 안내 배너
+        // 먼저 Shield 보유 여부 체크 → 있으면 공격 완전 무효화
+        if (hasShieldCard) {
+            handleShieldDefenseFromAttack("REMOVE");
+            return;
+        }
+
+        // Shield가 없으면 기존처럼 안내 후 실제 제거 진행
         showRemoveNotice(
                 "Remove",
                 "상대방이 공격카드를 사용했습니다.\n당신의 돌 1개가 제거되었습니다."
@@ -1666,12 +1754,17 @@ public class GameBoardController {
 
     /** 서버에서 'REMOVE_TARGET r c' 를 받았을 때 */
     public void onRemoveTargetFromOpponent(int r, int c) {
-        System.out.println("[GameBoard] Remove 타겟 좌표 수신: (" + r + "," + c + ")");
-        applyRemoveAt(r, c);
+        System.out.println("[GameBoard] Remove 타겟 좌표 수신: (" + r + ", " + c + ")");
 
-        if (!gameEnded) {
-            endTurnAfterCardUse();
+        // Shield로 이미 방어한 공격이면 실제 제거 무시
+        if (shieldBlockRemovePending) {
+            System.out.println("[GameBoard] Shield로 인해 Remove 효과 무시");
+            shieldBlockRemovePending = false;
+            return;
         }
+
+        applyRemoveAt(r, c);
+        // 턴 전환은 서버 TURN 메시지로 처리
     }
 
     // ================== Remove 안내 배너 공통 메서드 ==================
@@ -1689,6 +1782,132 @@ public class GameBoardController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /** SHIELD 를 제외한 실제 선택 가능한 카드 리스트 */
+    private List<Card> getUsableCardsForModal() {
+        if (receivedCards == null || receivedCards.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Card> usable = new ArrayList<>();
+        for (Card card : receivedCards) {
+            if (card == null) continue;
+            switch (card.getType()) {
+                case SHIELD -> { /* 자동 발동이라 모달에서는 제외 */ }
+                default -> usable.add(card);
+            }
+        }
+        return usable;
+    }
+
+    /** SHIELD 카드 1장을 소모하고 슬롯 UI를 다시 그린다. */
+    private void consumeShieldCard() {
+        hasShieldCard = false;
+        if (receivedCards == null || receivedCards.isEmpty()) return;
+
+        receivedCards.removeIf(card -> {
+            if (card == null) return false;
+            return switch (card.getType()) {
+                case SHIELD -> true;
+                default -> false;
+            };
+        });
+
+        // Shield는 슬롯에 안 보이지만, 남은 카드 슬롯을 다시 갱신
+        setReceivedCards(receivedCards);
+    }
+
+    /** 방어 측(피격자)용 안내 팝업 */
+    private void showShieldNoticeForDefender() {
+        showShieldNotice(
+                "Shield",
+                "상대방이 공격카드를 사용했습니다\n카드가 자동발동하여 방어에 성공했습니다"
+        );
+    }
+
+    /** 공격 측(카드 사용자)용 안내 팝업 */
+    private void showShieldNoticeForAttacker() {
+        showShieldNotice(
+                "Shield",
+                "상대방이 방어카드를 사용했습니다\n당신의 공격은 실패했습니다"
+        );
+    }
+
+    private void showShieldNotice(String title, String message) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/ShieldNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+            ShieldNoticeController controller = loader.getController();
+            controller.setTexts(title, message);
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Remove / Swap 공격카드가 들어왔을 때 Shield 로 막는 공통 처리
+     * @param attackType "REMOVE" 또는 "SWAP"
+     */
+    private void handleShieldDefenseFromAttack(String attackType) {
+        if (!hasShieldCard) return;
+
+        System.out.println("[GameBoard] Shield 카드 자동 발동! attackType = " + attackType);
+
+        // 1) 내 쪽(피격자) 방어 연출 + 카드 소모
+        consumeShieldCard();
+        showShieldNoticeForDefender();
+
+        // 2) 공격자에게 "막혔다" 알림 전송 + 이쪽에서는 이후 타겟을 무시하기 위한 플래그 세팅
+        if (networkClient != null) {
+            switch (attackType) {
+                case "REMOVE" -> {
+                    shieldBlockRemovePending = true;
+                    networkClient.sendShieldBlockForRemove();
+                }
+                case "SWAP" -> {
+                    shieldBlockSwapPending = true;
+                    networkClient.sendShieldBlockForSwap();
+                }
+            }
+        }
+
+        // 3) 턴 관리는 서버가 처리하므로 여기서는 턴 종료/전환 로직을 넣지 않는다.
+    }
+
+    /** 서버에서 'SHIELD_BLOCK_REMOVE' 수신: 내가 쓴 Remove 가 상대 Shield 에 막힘 */
+    public void onShieldBlockRemoveFromOpponent() {
+        System.out.println("[GameBoard] 내 Remove 카드가 상대의 Shield에 의해 막혔습니다.");
+
+        // Remove 선택 모드/가이드 종료
+        removeSelecting = false;
+        if (removeGuideController != null) {
+            removeGuideController.close();
+            removeGuideController = null;
+        }
+
+        showShieldNoticeForAttacker();
+
+        // 🔥 내가 카드를 사용할 때 이미 endMyTurn()을 호출했기 때문에
+        // 여기서는 턴/타이머를 건드리지 않는다.
+    }
+
+    /** 서버에서 'SHIELD_BLOCK_SWAP' 수신: 내가 쓴 Swap 이 상대 Shield 에 막힘 */
+    public void onShieldBlockSwapFromOpponent() {
+        System.out.println("[GameBoard] 내 Swap 카드가 상대의 Shield에 의해 막혔습니다.");
+
+        swapSelecting = false;
+        swapMyPos = null;
+        if (swapGuideController != null) {
+            swapGuideController.close();
+            swapGuideController = null;
+        }
+
+        showShieldNoticeForAttacker();
+
+        // 여기서도 턴 전환/타이머 변경 X (카드 사용 시 이미 처리됨)
     }
 
 }
