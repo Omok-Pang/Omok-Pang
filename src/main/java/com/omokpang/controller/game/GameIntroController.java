@@ -154,6 +154,16 @@ public class GameIntroController {
                 public void sendDoubleMoveStart() {
                     client.send("DOUBLE_MOVE_START");
                 }
+
+                @Override
+                public void sendRemoveStart() {
+                    client.send("REMOVE_START");
+                }
+
+                @Override
+                public void sendRemoveTarget(int row, int col) {
+                    client.send("REMOVE_TARGET " + row + " " + col);
+                }
             });
 
             // 6) 서버 → GameBoard 방향 (메시지 수신 처리)
@@ -222,6 +232,18 @@ public class GameIntroController {
                     } else if (line.startsWith("DOUBLE_MOVE_START")) {
                         // 상대가 DoubleMove 카드를 사용한 경우
                         controller.onDoubleMoveStartFromOpponent();
+                    } else if (line.startsWith("REMOVE_START")) {
+                        controller.onRemoveStartFromOpponent();
+
+                    } else if (line.startsWith("REMOVE_TARGET")) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            try {
+                                int r = Integer.parseInt(parts[1]);
+                                int c = Integer.parseInt(parts[2]);
+                                controller.onRemoveTargetFromOpponent(r, c);
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
                     // MATCH, ECHO 등은 다른 화면에서 처리
                 });

@@ -216,6 +216,27 @@ public class GameServer {
                     continue;
                 }
 
+                // 🔥 Remove 시작: REMOVE_START
+                if (line.startsWith("REMOVE_START")) {
+                    if (nickname != null) {
+                        forwardRemoveStart(nickname);
+                    }
+                    continue;
+                }
+
+                // 🔥 Remove 타겟: REMOVE_TARGET r c
+                if (line.startsWith("REMOVE_TARGET")) {
+                    if (nickname != null) {
+                        String[] parts = line.split("\\s+");
+                        if (parts.length >= 3) {
+                            int r = Integer.parseInt(parts[1]);
+                            int c = Integer.parseInt(parts[2]);
+                            forwardRemoveTarget(nickname, r, c);
+                        }
+                    }
+                    continue;
+                }
+
                 // 기타: 테스트용 에코
                 out.println("ECHO: " + line);
             }
@@ -322,6 +343,28 @@ public class GameServer {
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
             outOpp.println("DOUBLE_MOVE_START");
+        }
+    }
+
+    // Remove 시작 알림: from -> 그의 상대에게만
+    private static void forwardRemoveStart(String from) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("REMOVE_START");
+        }
+    }
+
+    // Remove 타겟 좌표 전달: from -> 그의 상대에게만
+    private static void forwardRemoveTarget(String from, int r, int c) {
+        String opp = opponentMap.get(from);
+        if (opp == null) return;
+
+        PrintWriter outOpp = clientMap.get(opp);
+        if (outOpp != null) {
+            outOpp.println("REMOVE_TARGET " + r + " " + c);
         }
     }
 

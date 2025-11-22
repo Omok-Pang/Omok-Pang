@@ -8,6 +8,8 @@ import com.omokpang.controller.effect.SharedStoneNoticeController;
 import com.omokpang.controller.effect.BombGuideController;
 import com.omokpang.controller.effect.BombNoticeController;
 import com.omokpang.controller.effect.DoubleMoveNoticeController;
+import com.omokpang.controller.effect.RemoveGuideController;
+import com.omokpang.controller.effect.RemoveNoticeController;
 
 import com.omokpang.domain.card.Card;
 import com.omokpang.session.MatchSession;
@@ -88,6 +90,10 @@ public class GameBoardController {
 
     // DoubleMove: 현재 턴 플레이어에게 남아 있는 추가 수(한 번 사용 시 1)
     private int doubleMoveExtraMoves = 0;
+
+    // Remove (상대 돌 1개 제거)
+    private boolean removeSelecting = false;
+    private RemoveGuideController removeGuideController;
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -435,6 +441,12 @@ public class GameBoardController {
         // ✅ SharedStone 선택 모드인 경우: 돌 두기 대신 "상대 돌 선택"으로 사용
         if (sharedStoneSelecting) {
             handleSharedStoneTargetClick(r, c);
+            return;
+        }
+
+        // ✅ Remove 선택 모드 (상대 돌 1개 제거)
+        if (removeSelecting) {
+            handleRemoveTargetClick(r, c);
             return;
         }
 
@@ -867,6 +879,9 @@ public class GameBoardController {
                 case DOUBLE_MOVE -> {
                     useDoubleMoveCard();
                 }
+                case REMOVE -> {
+                    useRemoveCard();
+                }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
                 }
@@ -1240,6 +1255,10 @@ public class GameBoardController {
 
         // DoubleMove
         void sendDoubleMoveStart();
+
+        // Remove (상대 돌 제거)
+        void sendRemoveStart();
+        void sendRemoveTarget(int row, int col);
     }
 
     private NetworkClient networkClient;
@@ -1523,6 +1542,148 @@ public class GameBoardController {
 
             DoubleMoveNoticeController controller = loader.getController();
             controller.setMessage(message);
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ================== Remove 카드 로직 (상대 돌 1개 제거) ==================
+
+    /** Remove 카드 사용 시작 (내가 카드 선택했을 때 호출) */
+    private void useRemoveCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 Remove 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] Remove 카드 사용!");
+
+        // 서버에 Remove 사용 시작 알림
+        if (networkClient != null) {
+            networkClient.sendRemoveStart();
+        }
+
+        enterRemoveSelectMode();
+    }
+
+    /** Remove 선택 모드 진입: 안내 오버레이 + 상대 돌 선택 대기 */
+    private void enterRemoveSelectMode() {
+        removeSelecting = true;
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/RemoveGuide.fxml")
+            );
+            StackPane overlay = loader.load();
+            removeGuideController = loader.getController();
+
+            // ✅ 오버레이는 화면에 보이기만 하고, 마우스는 아래(boardRoot)로 통과시키기
+            overlay.setMouseTransparent(true);
+
+            // 콜백 등록 (현재 구조에서는 boardRoot 클릭 → GameBoardController가 notifyStoneSelected 호출)
+            removeGuideController.setOnStoneSelected((row, col) -> {
+                onRemoveTargetChosenByMe(row, col);
+            });
+
+            centerStack.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /** Remove 선택 모드에서 보드를 클릭했을 때 */
+    private void handleRemoveTargetClick(int r, int c) {
+        if (!isInside(r, c)) return;
+
+        // 상대 돌만 제거 가능
+        if (board[r][c] != opponentSign && !sharedStones[r][c]) {
+            System.out.println("[GameBoard] Remove: 상대 돌이 아닌 곳을 클릭했습니다.");
+            return;
+        }
+
+        if (removeGuideController != null) {
+            removeGuideController.notifyStoneSelected(r, c);
+        } else {
+            onRemoveTargetChosenByMe(r, c);
+        }
+    }
+
+    private void onRemoveTargetChosenByMe(int r, int c) {
+        removeSelecting = false;
+
+        // 안내 오버레이 닫기
+        if (removeGuideController != null) {
+            removeGuideController.close();
+            removeGuideController = null;
+        }
+
+        applyRemoveAt(r, c);
+
+        // ✅ 내가 쓴 Remove 카드 안내 (내 화면 아래쪽 배너)
+        showRemoveNotice(
+                "Remove",
+                "상대방의 돌 1개를 제거했습니다."
+        );
+
+        if (networkClient != null) {
+            networkClient.sendRemoveTarget(r, c);
+        }
+
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    /** (r,c)의 돌을 제거한다. */
+    private void applyRemoveAt(int r, int c) {
+        if (!isInside(r, c)) return;
+        if (board[r][c] == 0) return;
+
+        ImageView stone = stoneViews[r][c];
+        if (stone != null) {
+            boardRoot.getChildren().remove(stone);
+        }
+
+        board[r][c] = 0;
+        stoneViews[r][c] = null;
+        sharedStones[r][c] = false;
+
+        System.out.println("[GameBoard] Remove 적용: (" + r + ", " + c + ")의 돌 제거");
+    }
+
+    /** 서버에서 '상대가 Remove 카드를 사용했다' 알림을 받았을 때 */
+    public void onRemoveStartFromOpponent() {
+        System.out.println("[GameBoard] 상대가 Remove 카드를 사용했습니다.");
+
+        // ✅ 상대가 Remove 사용 → 내 돌이 제거될 것이라는 안내 배너
+        showRemoveNotice(
+                "Remove",
+                "상대방이 공격카드를 사용했습니다.\n당신의 돌 1개가 제거되었습니다."
+        );
+    }
+
+    /** 서버에서 'REMOVE_TARGET r c' 를 받았을 때 */
+    public void onRemoveTargetFromOpponent(int r, int c) {
+        System.out.println("[GameBoard] Remove 타겟 좌표 수신: (" + r + "," + c + ")");
+        applyRemoveAt(r, c);
+
+        if (!gameEnded) {
+            endTurnAfterCardUse();
+        }
+    }
+
+    // ================== Remove 안내 배너 공통 메서드 ==================
+    private void showRemoveNotice(String title, String message) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/RemoveNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+            RemoveNoticeController controller = loader.getController();
+            if (title != null) controller.setTitle(title);
+            if (message != null) controller.setMessage(message);
 
             centerStack.getChildren().add(overlay);
         } catch (IOException e) {
