@@ -7,6 +7,9 @@ package com.omokpang.repository;
 
 import com.omokpang.domain.user.User;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 
@@ -90,5 +93,40 @@ public class UserRepository {
             return null;
         }
     }
+
+    public List<User> findAllOrderByPoints() {
+        String sql = """
+    SELECT id, nickname, password, wins, losses, points, created_at
+    FROM users
+    ORDER BY points DESC
+    """;
+
+        List<User> list = new ArrayList<>();
+
+        try (Connection conn = DataSourceProvider.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String nickname = rs.getString("nickname");
+                String pw = rs.getString("password");
+                int wins = rs.getInt("wins");
+                int losses = rs.getInt("losses");
+                int points = rs.getInt("points");
+                Timestamp ts = rs.getTimestamp("created_at");
+                LocalDateTime createdAt = ts != null ? ts.toLocalDateTime() : null;
+
+                list.add(new User(id, nickname, pw, wins, losses, points, createdAt));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return list;
+    }
+
+
 }
 
