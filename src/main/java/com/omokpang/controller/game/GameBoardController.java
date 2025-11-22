@@ -1,8 +1,6 @@
 package com.omokpang.controller.game;
 
-import com.omokpang.controller.effect.TimeLockNoticeController;
 import com.omokpang.controller.effect.SwapSelectGuideController;
-import com.omokpang.controller.effect.SwapNoticeController;
 import com.omokpang.controller.effect.SharedStoneGuideController;
 import com.omokpang.controller.effect.SharedStoneNoticeController;
 import com.omokpang.controller.effect.BombGuideController;
@@ -11,6 +9,7 @@ import com.omokpang.controller.effect.DoubleMoveNoticeController;
 import com.omokpang.controller.effect.RemoveGuideController;
 import com.omokpang.controller.effect.RemoveNoticeController;
 import com.omokpang.controller.effect.ShieldNoticeController;
+import com.omokpang.controller.effect.DefenseNoticeController;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,8 +19,6 @@ import com.omokpang.session.MatchSession;
 
 import com.omokpang.controller.result.ResultController;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
@@ -117,6 +114,9 @@ public class GameBoardController {
     // Shield 로 인해 공격 효과를 무시해야 하는지 플래그
     private boolean shieldBlockRemovePending = false;
     private boolean shieldBlockSwapPending = false;
+
+    // Defense 카드
+    private boolean defenseReady = false;             // DEFENSE 카드를 이번 턴에 활성화했는가
 
     // 루트 레이아웃
     @FXML private BorderPane rootPane;
@@ -749,9 +749,17 @@ public class GameBoardController {
 
         if (myTurn) {
             // 내 턴 시작: 타이머 / movesLeft 초기화
+
+            // 🔥 지난 턴에 사용했던 Defense 버프는 상대 턴 동안만 유효,
+            // 내 턴이 다시 돌아오면 소멸 (상대가 공격 안 해서 허공에 버려진 상태)
+            if (defenseReady) {
+                defenseReady = false;
+                System.out.println("[GameBoard] Defense 버프가 사용되지 않고 소멸되었습니다.");
+            }
+
             startTurn();
         } else {
-            // 상대 턴: 이 클라이언트에서는 타이머 정지 (원하면 상대 턴 타이머도 그릴 수 있음)
+            // 상대 턴: 타이머 정지
             stopTimer();
             movesLeftInCurrentTurn = 1;
             timerLabel.setText("");
@@ -943,6 +951,9 @@ public class GameBoardController {
                 }
                 case SHIELD -> {
                     hasShieldCard = true;
+                }
+                case DEFENSE -> {
+                    useDefenseCard();
                 }
                 default -> {
                     System.out.println("[GameBoard] 아직 구현되지 않은 카드 타입: " + selectedCard.getType());
@@ -1532,20 +1543,27 @@ public class GameBoardController {
      * - 중앙에 안내 오버레이(SwapNotice)를 띄움.
      */
     public void onSwapStartFromOpponent() {
-        System.out.println("[GameBoard] 상대가 Swap 카드를 사용했습니다.");
 
-        // Shield 있으면 여기서 바로 막고 끝
+        System.out.println("[GameBoard] 상대 Swap 사용됨");
+
+        // 1순위: Defense로 자동 방어
+        if (defenseReady) {
+            handleDefenseAutoBlock("SWAP");
+            return;
+        }
+
+        // 2순위: Shield 자동 방어
         if (hasShieldCard) {
             handleShieldDefenseFromAttack("SWAP");
             return;
         }
 
+        // 방어 카드가 없으면, 그냥 안내 오버레이만 띄움
         try {
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/effect/SwapNotice.fxml")
             );
-            StackPane overlay = loader.load();
-            centerStack.getChildren().add(overlay);
+            centerStack.getChildren().add(loader.load());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -1737,19 +1755,23 @@ public class GameBoardController {
 
     /** 서버에서 '상대가 Remove 카드를 사용했다' 알림을 받았을 때 */
     public void onRemoveStartFromOpponent() {
-        System.out.println("[GameBoard] 상대가 Remove 카드를 사용했습니다.");
 
-        // 먼저 Shield 보유 여부 체크 → 있으면 공격 완전 무효화
+        System.out.println("[GameBoard] 상대 Remove 사용됨");
+
+        // 1순위: Defense 자동 방어
+        if (defenseReady) {
+            handleDefenseAutoBlock("REMOVE");
+            return;
+        }
+
+        // 2순위: Shield 자동 방어
         if (hasShieldCard) {
             handleShieldDefenseFromAttack("REMOVE");
             return;
         }
 
-        // Shield가 없으면 기존처럼 안내 후 실제 제거 진행
-        showRemoveNotice(
-                "Remove",
-                "상대방이 공격카드를 사용했습니다.\n당신의 돌 1개가 제거되었습니다."
-        );
+        // 방어 카드 없으면 기존처럼 안내
+        showRemoveNotice("Remove", "상대가 공격카드를 사용했습니다.\n당신의 돌이 제거됩니다.");
     }
 
     /** 서버에서 'REMOVE_TARGET r c' 를 받았을 때 */
@@ -1879,7 +1901,7 @@ public class GameBoardController {
 
     /** 서버에서 'SHIELD_BLOCK_REMOVE' 수신: 내가 쓴 Remove 가 상대 Shield 에 막힘 */
     public void onShieldBlockRemoveFromOpponent() {
-        System.out.println("[GameBoard] 내 Remove 카드가 상대의 Shield에 의해 막혔습니다.");
+        System.out.println("[GameBoard] 내 Remove 카드가 상대의 Shield/Defense에 의해 막혔습니다.");
 
         // Remove 선택 모드/가이드 종료
         removeSelecting = false;
@@ -1890,13 +1912,15 @@ public class GameBoardController {
 
         showShieldNoticeForAttacker();
 
-        // 🔥 내가 카드를 사용할 때 이미 endMyTurn()을 호출했기 때문에
-        // 여기서는 턴/타이머를 건드리지 않는다.
+        // 🔥 여기 추가: 아직도 내 턴이면(=Defense로 막힌 경우) 턴을 종료해 준다.
+        if (!gameEnded && isMyTurn()) {
+            endMyTurn();
+        }
     }
 
     /** 서버에서 'SHIELD_BLOCK_SWAP' 수신: 내가 쓴 Swap 이 상대 Shield 에 막힘 */
     public void onShieldBlockSwapFromOpponent() {
-        System.out.println("[GameBoard] 내 Swap 카드가 상대의 Shield에 의해 막혔습니다.");
+        System.out.println("[GameBoard] 내 Swap 카드가 상대의 Shield/Defense에 의해 막혔습니다.");
 
         swapSelecting = false;
         swapMyPos = null;
@@ -1907,7 +1931,90 @@ public class GameBoardController {
 
         showShieldNoticeForAttacker();
 
-        // 여기서도 턴 전환/타이머 변경 X (카드 사용 시 이미 처리됨)
+        // 🔥 여기 추가: 아직도 내 턴이면(=Defense로 막힌 경우) 턴을 종료해 준다.
+        if (!gameEnded && isMyTurn()) {
+            endMyTurn();
+        }
+    }
+
+    /**
+     * DEFENSE 카드 사용 (내가 사용)
+     * - 턴이 유지되고 돌도 둘 수 있다.
+     * - 상대는 내가 사용했는지 모른다.
+     * - 이번 상대 턴의 REMOVE / SWAP 1회 자동 방어.
+     */
+    private void useDefenseCard() {
+        if (!isMyTurn()) {
+            System.out.println("[GameBoard] 내 턴이 아니라 Defense 카드를 사용할 수 없습니다.");
+            return;
+        }
+
+        System.out.println("[GameBoard] Defense 카드 사용! 다음 상대 공격(Remove/Swap) 1회 자동 방어.");
+
+        // 이번 상대 턴 동안 유효한 방어 버프
+        defenseReady = true;
+
+        // 안내 배너 띄우기 (내 화면에만)
+        showDefenseActivatedNotice();
+    }
+
+    /** 하단 안내 배너: Defense 사용 직후 */
+    private void showDefenseActivatedNotice() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/effect/DefenseNotice.fxml")
+            );
+            StackPane overlay = loader.load();
+
+            DefenseNoticeController controller = loader.getController();
+            controller.setTexts(
+                    "Defense",
+                    "Defense 방어카드를 사용했습니다.\n다음 상대 턴의 Remove/Swap 공격을 자동으로 방어합니다."
+            );
+
+            centerStack.getChildren().add(overlay);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Defense 자동 방어 처리
+     * @param attackType "REMOVE" 또는 "SWAP"
+     */
+    private void handleDefenseAutoBlock(String attackType) {
+        if (!defenseReady) return;
+
+        System.out.println("[GameBoard] Defense 자동 발동! attackType = " + attackType);
+
+        // 이번 Defense 버프는 한 번만 유효
+        defenseReady = false;
+
+        // 이후 들어오는 타겟 좌표(Remove/Swap)는 무시하기 위해 플래그 설정
+        if ("REMOVE".equals(attackType)) {
+            shieldBlockRemovePending = true;
+            if (networkClient != null) {
+                networkClient.sendShieldBlockForRemove();   // 공격자에게 '막혔다' 알림
+            }
+        } else if ("SWAP".equals(attackType)) {
+            shieldBlockSwapPending = true;
+            if (networkClient != null) {
+                networkClient.sendShieldBlockForSwap();
+            }
+        }
+
+        // 내 화면에 Defense 방어 성공 안내 (ShieldNotice UI 재활용)
+        showDefenseNoticeForDefender();
+    }
+
+    /** 방어 측(나)용 Defense 방어 성공 안내 */
+    private void showDefenseNoticeForDefender() {
+        // ShieldNotice.fxml + ShieldNoticeController를 재활용해서 텍스트만 바꾸자
+        showShieldNotice(
+                "Defense",
+                "상대의 공격카드를 미리 사용한 Defense로 방어했습니다."
+        );
     }
 
 }
