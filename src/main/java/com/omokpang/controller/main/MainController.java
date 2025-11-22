@@ -154,6 +154,12 @@ public class MainController {
         SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 
+    /*랭크보기*/
+    @FXML
+    private void handleShowRanking() {
+        SceneRouter.go("/fxml/splash/RankingView.fxml");
+    }
+
     /* ==================== 유틸 ==================== */
 
     private Image loadImg(String path) {
