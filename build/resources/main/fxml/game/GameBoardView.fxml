@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.game.GameBoardController"
+            fx:id="rootPane"
+            prefWidth="750" prefHeight="600"
+            stylesheets="/css/game-board.css"
+            style="
+                -fx-background-image: url('/images/bg_darkmode.png');
+                -fx-background-size: cover;
+                -fx-background-position: center center;
+                -fx-background-repeat: no-repeat;
+            ">
+
+    <!-- ================= 중앙 영역 ================= -->
+    <center>
+        <StackPane fx:id="centerStack">
+
+            <VBox alignment="CENTER" spacing="16" fillWidth="false">
+
+                <!-- 🔼 위쪽 유저: 아바타 + 말풍선 -->
+                <StackPane alignment="CENTER">
+                    <!-- 아바타 -->
+                    <StackPane fx:id="topPlayerContainer" alignment="CENTER">
+                        <ImageView fx:id="topPlayerImage"
+                                   fitWidth="96"
+                                   fitHeight="96"
+                                   preserveRatio="true">
+                            <image>
+                                <Image url="/images/user/user1.png"/>
+                            </image>
+                        </ImageView>
+                    </StackPane>
+
+                    <!-- 위쪽 말풍선 -->
+                    <StackPane fx:id="topMessageBubble"
+                               visible="false"
+                               alignment="CENTER"
+                               translateX="140"
+                               translateY="8">
+                        <ImageView fitWidth="150" preserveRatio="true">
+                            <image>
+                                <Image url="/images/message/ui_message.png"/>
+                            </image>
+                        </ImageView>
+                        <Label fx:id="topMessageLabel"
+                               wrapText="true"
+                               maxWidth="120"
+                               alignment="CENTER"
+                               textAlignment="CENTER"
+                               translateX="2"
+                               translateY="-3"
+                               style="
+                                   -fx-text-fill: white;
+                                   -fx-font-size: 18;
+                                   -fx-font-weight: 800;
+                               "/>
+                    </StackPane>
+                </StackPane>
+
+                <!-- 오목 보드 -->
+                <StackPane alignment="CENTER">
+                    <Pane fx:id="boardRoot"
+                          prefWidth="360" prefHeight="360"
+                          maxWidth="360" maxHeight="360"
+                          minWidth="360" minHeight="360"
+                          style="-fx-background-color: transparent;"/>
+                </StackPane>
+
+                <!-- 🔽 아래쪽 유저: 아바타 + 말풍선 -->
+                <StackPane alignment="CENTER">
+                    <StackPane fx:id="bottomPlayerContainer" alignment="CENTER">
+                        <ImageView fx:id="bottomPlayerImage"
+                                   fitWidth="96"
+                                   fitHeight="96"
+                                   preserveRatio="true">
+                            <image>
+                                <Image url="/images/user/user2.png"/>
+                            </image>
+                        </ImageView>
+                    </StackPane>
+
+                    <StackPane fx:id="bottomMessageBubble"
+                               visible="false"
+                               alignment="CENTER"
+                               translateX="140"
+                               translateY="-8">
+                        <ImageView fitWidth="150" preserveRatio="true">
+                            <image>
+                                <Image url="/images/message/ui_message.png"/>
+                            </image>
+                        </ImageView>
+                        <Label fx:id="bottomMessageLabel"
+                               wrapText="true"
+                               maxWidth="120"
+                               alignment="CENTER"
+                               textAlignment="CENTER"
+                               translateX="2"
+                               translateY="-3"
+                               style="
+                                   -fx-text-fill: white;
+                                   -fx-font-size: 18;
+                                   -fx-font-weight: 800;
+                               "/>
+                    </StackPane>
+                </StackPane>
+            </VBox>
+
+            <!-- 왼쪽 유저 (3번 플레이어 자리) -->
+            <StackPane fx:id="leftPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_LEFT">
+                <StackPane.margin>
+                    <Insets left="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="leftPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user3.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- 오른쪽 유저 (4번 플레이어 자리) -->
+            <StackPane fx:id="rightPlayerContainer"
+                       alignment="CENTER"
+                       StackPane.alignment="CENTER_RIGHT">
+                <StackPane.margin>
+                    <Insets right="40"/>
+                </StackPane.margin>
+                <ImageView fx:id="rightPlayerImage"
+                           fitWidth="88" fitHeight="88" preserveRatio="true">
+                    <image>
+                        <Image url="/images/user/user4.png"/>
+                    </image>
+                </ImageView>
+            </StackPane>
+
+            <!-- 왼쪽 말풍선 선택 패널 -->
+            <StackPane fx:id="messageSelectPane"
+                       visible="false"
+                       pickOnBounds="false"
+                       alignment="TOP_LEFT"
+                       StackPane.alignment="TOP_LEFT">
+                <StackPane.margin>
+                    <Insets left="10" top="40"/>
+                </StackPane.margin>
+
+                <VBox alignment="TOP_CENTER"
+                      prefWidth="220" maxWidth="220" spacing="0">
+
+                    <ScrollPane fx:id="messageScroll"
+                                styleClass="cheer-scroll"
+                                prefWidth="220" maxWidth="220"
+                                prefViewportHeight="720"
+                                fitToWidth="true"
+                                hbarPolicy="NEVER"
+                                vbarPolicy="NEVER"
+                                style="
+                                    -fx-background-color: transparent;
+                                    -fx-border-color: transparent;
+                                ">
+                        <content>
+                            <VBox fx:id="messageListBox"
+                                  spacing="4"
+                                  fillWidth="true"
+                                  style="-fx-background-color: transparent;">
+                                <padding>
+                                    <Insets top="10" right="0" bottom="10" left="0"/>
+                                </padding>
+                            </VBox>
+                        </content>
+                    </ScrollPane>
+                </VBox>
+            </StackPane>
+
+        </StackPane>
+    </center>
+
+    <!-- 상단 타이머 -->
+    <top>
+        <HBox spacing="18" alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10" right="16" bottom="10" left="16"/>
+            </padding>
+            <Label fx:id="timerLabel"
+                   text="20초"
+                   style="-fx-font-size:20; -fx-font-weight:800; -fx-text-fill:white;"/>
+        </HBox>
+    </top>
+
+    <!-- 하단: 말풍선 버튼 + 턴 표시 + 카드 슬롯 -->
+    <bottom>
+        <HBox spacing="16" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="14" left="10"/>
+            </padding>
+
+            <Button fx:id="messageButton"
+                    onAction="#handleCheer"
+                    style="-fx-background-color: transparent; -fx-padding: 0;">
+                <graphic>
+                    <ImageView fitHeight="40" preserveRatio="true">
+                        <image>
+                            <Image url="/images/message/btn_message.png"/>
+                        </image>
+                    </ImageView>
+                </graphic>
+            </Button>
+
+            <Label fx:id="turnLabel"
+                   text="내 턴 (아래 유저)"
+                   style="-fx-font-size:18; -fx-font-weight:800; -fx-text-fill:white;"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <HBox fx:id="cardSlotBox"
+                  spacing="8"
+                  alignment="CENTER_RIGHT"
+                  onMouseClicked="#handleOpenCardModal">
+                <!-- 아이콘들 -->
+            </HBox>
+
+        </HBox>
+    </bottom>
+
+</BorderPane>

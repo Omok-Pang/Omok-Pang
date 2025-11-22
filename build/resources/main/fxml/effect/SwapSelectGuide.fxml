@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<StackPane fx:id="rootOverlay"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.effect.SwapSelectGuideController"
+           alignment="BOTTOM_CENTER"
+           style="-fx-background-color: transparent;">
+
+    <VBox StackPane.alignment="BOTTOM_CENTER"
+          alignment="CENTER"
+          spacing="8"
+          prefHeight="140"
+          minHeight="140"
+          maxHeight="140"
+          style="-fx-background-color: rgba(0,0,0,0.75);
+                 -fx-background-radius: 24;
+                 -fx-padding: 20 40 20 40;">
+        <Label fx:id="guideLabel"
+               text="변경하고 싶은 자신의 돌 1개와 상대방 돌 1개를 선택하세요&#10;자신의 돌 선택 -> 변경하고 싶은 상대방의 돌 선택"
+               wrapText="true"
+               style="-fx-text-fill: white;
+                      -fx-font-size: 18px;
+                      -fx-font-weight: bold;
+                      -fx-alignment: center;" />
+    </VBox>
+
+</StackPane>
