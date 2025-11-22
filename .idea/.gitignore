@@ -11,6 +11,8 @@
 # Gradle
 .gradle/
 build/
+/build
+/.gradle
 
 # IntelliJ
 .idea/
