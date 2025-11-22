@@ -1,52 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
 <!--
-  역할: 상대에게 Time Lock 카드가 적용됐을 때 안내 메세지를 잠깐 보여주는 오버레이
+  역할: 상대방이 Time Lock 카드를 사용해서
+       "내 돌 놓을 수 있는 시간이 3초로 줄어들었을 때"
+       잠깐 안내 문구를 보여주는 오버레이 (화면 아래 바)
 -->
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-
-<StackPane xmlns="http://javafx.com/javafx/21"
+<StackPane fx:id="rootOverlay"
+           xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.omokpang.controller.effect.TimeLockNoticeController"
-           fx:id="root"
-           prefWidth="750" prefHeight="600"
-           style="-fx-background-color: rgba(0,0,0,0.55);">
+           alignment="BOTTOM_CENTER"
+           style="-fx-background-color: transparent;">
 
-    <!-- 중앙 안내 박스 -->
-    <StackPane alignment="CENTER">
-        <StackPane maxWidth="520" maxHeight="260"
-                   style="
-                       -fx-background-color: rgba(0,0,0,0.90);
-                       -fx-background-radius: 24;
-                       -fx-padding: 32 40 32 40;
-                   ">
-            <VBox alignment="CENTER" spacing="16">
-                <Label text="Time Lock"
-                       style="
-                           -fx-text-fill: #ff4d4f;
-                           -fx-font-size: 28;
-                           -fx-font-weight: 800;
-                       "/>
+    <!-- 아래쪽 안내 바 -->
+    <VBox StackPane.alignment="BOTTOM_CENTER"
+          alignment="CENTER"
+          spacing="8"
+          prefHeight="140"
+          minHeight="140"
+          maxHeight="140"
+          style="-fx-background-color: rgba(0,0,0,0.75);
+                 -fx-background-radius: 24;
+                 -fx-padding: 20 40 20 40;">
+        <Label fx:id="noticeLabel"
+               text="상대방이 Time Lock 카드를 사용했습니다.&#10;당신의 제한시간이 3초로 줄어듭니다."
+               wrapText="true"
+               style="-fx-text-fill: white;
+                      -fx-font-size: 18px;
+                      -fx-font-weight: bold;
+                      -fx-alignment: center;" />
+    </VBox>
 
-                <Label text="상대방이 공격카드를 사용했습니다"
-                       wrapText="true"
-                       textAlignment="CENTER"
-                       style="
-                           -fx-text-fill: white;
-                           -fx-font-size: 18;
-                           -fx-font-weight: 700;
-                       "/>
-
-                <Label text="제한시간이 3초로 줄어듭니다"
-                       wrapText="true"
-                       textAlignment="CENTER"
-                       style="
-                           -fx-text-fill: white;
-                           -fx-font-size: 18;
-                           -fx-font-weight: 700;
-                       "/>
-            </VBox>
-        </StackPane>
-    </StackPane>
 </StackPane>

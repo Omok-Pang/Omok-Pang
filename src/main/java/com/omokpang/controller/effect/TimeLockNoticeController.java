@@ -2,39 +2,50 @@ package com.omokpang.controller.effect;
 
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
 /**
- * 역할: Time Lock 안내 오버레이를 일정 시간 보여주고 자동으로 닫은 뒤 콜백 실행
+ * 역할: 상대에게 Time Lock 카드가 적용됐을 때
+ *      화면 아래쪽에 안내 문구를 잠깐 보여주는 오버레이.
+ *
+ * - GameBoardController에서 FXML을 로드해서 centerStack 위에 올려주면,
+ *   여기서 2초 정도 보여준 뒤 자동으로 StackPane에서 제거한다.
+ * - 클릭은 모두 보드로 통과되도록 mouseTransparent 처리.
  */
 public class TimeLockNoticeController {
 
+    @FXML private StackPane rootOverlay;
+    @FXML private Label noticeLabel;
+
     @FXML
-    private StackPane root;   // fx:id="root"
+    public void initialize() {
+        if (noticeLabel != null &&
+                (noticeLabel.getText() == null || noticeLabel.getText().isBlank())) {
+            noticeLabel.setText(
+                    "상대방이 Time Lock 카드를 사용했습니다.\n" +
+                            "당신의 제한시간이 3초로 줄어듭니다."
+            );
+        }
 
-    private StackPane parent; // 얹힐 컨테이너(centerStack)
-    private Runnable onFinished;
+        // 안내만 띄우는 용도이므로 클릭은 보드로 통과
+        if (rootOverlay != null) {
+            rootOverlay.setMouseTransparent(true);
+        }
 
-    /**
-     * GameBoard 쪽에서 호출해서 오버레이를 띄운다.
-     * @param parent    centerStack 같은 부모 컨테이너
-     * @param onFinished 2초 후 오버레이 제거가 끝나고 실행할 콜백 (예: 3초 타이머 시작)
-     */
-    public void showOn(StackPane parent, Runnable onFinished) {
-        this.parent = parent;
-        this.onFinished = onFinished;
-
-        parent.getChildren().add(root);
-
-        // 2초 후 자동으로 제거 + 콜백 실행
+        // 2초 후 자동 제거
         PauseTransition pause = new PauseTransition(Duration.seconds(2));
-        pause.setOnFinished(e -> {
-            parent.getChildren().remove(root);
-            if (this.onFinished != null) {
-                this.onFinished.run();
-            }
-        });
+        pause.setOnFinished(e -> close());
         pause.play();
+    }
+
+    /** 오버레이 제거 (centerStack에서 제거) */
+    private void close() {
+        if (rootOverlay == null) return;
+
+        if (rootOverlay.getParent() instanceof StackPane parent) {
+            parent.getChildren().remove(rootOverlay);
+        }
     }
 }

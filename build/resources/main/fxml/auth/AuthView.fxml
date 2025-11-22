@@ -5,22 +5,20 @@
 <?import javafx.scene.control.*?>
 <?import javafx.geometry.*?>
 
-<AnchorPane xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.omokpang.controller.auth.AuthController"
-            prefWidth="900" prefHeight="600">
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.auth.AuthController"
+           prefWidth="800" prefHeight="800">
 
-    <!-- 배경 이미지 -->
-    <ImageView fitWidth="900" fitHeight="600" preserveRatio="false"
-               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0">
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false">
         <image>
             <Image url="@/images/bg_darkmode.png" />
         </image>
     </ImageView>
 
     <!-- 중앙 로그인 박스 -->
-    <StackPane prefWidth="500" prefHeight="420"
-               AnchorPane.leftAnchor="170" AnchorPane.topAnchor="90">
+    <StackPane alignment="CENTER" prefWidth="520" prefHeight="430"
+               maxWidth="520" maxHeight="430">
 
         <!-- 박스 배경 이미지 -->
         <ImageView fitWidth="520" fitHeight="360"
@@ -31,7 +29,8 @@
         </ImageView>
 
         <!-- 탭 -->
-        <TabPane fx:id="authTabs" prefWidth="480" prefHeight="360"
+        <TabPane fx:id="authTabs"
+                 prefWidth="480" prefHeight="360"
                  tabClosingPolicy="UNAVAILABLE">
 
             <!-- 로그인 탭 -->
@@ -47,8 +46,8 @@
                     <TextField fx:id="loginIdField"
                                promptText="닉네임 입력"
                                style="-fx-background-radius: 8;
-                                      -fx-font-size: 14;
-                                      -fx-padding: 10;" />
+                                        -fx-font-size: 14;
+                                        -fx-padding: 10;" />
 
                     <PasswordField fx:id="loginPwField"
                                    promptText="비밀번호 입력"
@@ -120,10 +119,9 @@
                            textFill="red"
                            style="-fx-font-size: 13;" />
 
-                    <!-- 🔥 여기 있던 Hyperlink "로그인하기" 완전히 제거됨 -->
                 </VBox>
             </Tab>
 
         </TabPane>
     </StackPane>
-</AnchorPane>
+</StackPane>

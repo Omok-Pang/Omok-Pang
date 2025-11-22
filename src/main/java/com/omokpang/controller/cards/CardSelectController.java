@@ -57,6 +57,12 @@ public class CardSelectController {
     private void initialize() {
         timerLabel.setStyle("-fx-text-fill: white;");
 
+        beforeBox.setVisible(true);
+        beforeBox.setManaged(true);
+
+        afterBox.setVisible(false);
+        afterBox.setManaged(false);
+
         if (com.omokpang.session.AppSession.isLoggedIn()) {
             long id = com.omokpang.session.AppSession.getCurrentUser().getId();
             setUserId(id);
@@ -84,7 +90,10 @@ public class CardSelectController {
 
         // UI 전환
         beforeBox.setVisible(false);
+        beforeBox.setManaged(false);
+
         afterBox.setVisible(true);
+        afterBox.setManaged(true);
 
         // 카드 받기 버튼은 다시 못 누르게
         receiveBtn.setDisable(true);

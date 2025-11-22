@@ -4,6 +4,7 @@ import com.omokpang.net.OmokClient;
 import com.omokpang.session.MatchSession;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -11,7 +12,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.application.Platform;
 
 import java.io.IOException;
 
@@ -20,6 +20,7 @@ import java.io.IOException;
  *  - MatchSession 정보(players, myNickname)를 기준으로
  *    내가 선공인지 / 후공인지 문구 표시
  *  - 5초 카운트다운 후 GameBoardView로 전환 + 네트워크 바인딩
+ *  - 서버에서 오는 TURN / 카드 메시지 → GameBoardController 로 전달
  */
 public class GameIntroController {
 
@@ -32,28 +33,29 @@ public class GameIntroController {
     private Timeline countdownTimeline;
     private int remainSeconds = 5;
 
+    /** GameBoardController 인스턴스 (openGameBoard에서 로드 후 저장) */
+    private GameBoardController boardController;
+
     @FXML
     public void initialize() {
-        // ============================
-        //  MatchSession을 기반으로 선/후공 판단
-        // ============================
+
         String[] players = MatchSession.getPlayers();
         String me = MatchSession.getMyNickname();
 
-        iAmFirst = false; // 기본값: 후공
+        iAmFirst = false;
+
         if (players != null && players.length > 0 && me != null) {
-            // 약속: players[0] 이 선공인 플레이어
+            // 약속: players[0] → 선공 유저
             iAmFirst = players[0].equals(me);
         }
 
-        // 문구
         firstPlayerLabel.setText(
                 iAmFirst ? "당신이 선공입니다!" : "당신이 후공입니다!"
         );
 
-        // 카운트다운 시작
         startCountdown();
     }
+
 
     /** 1초마다 감소하는 카운트다운 타이머 */
     private void startCountdown() {
@@ -67,11 +69,11 @@ public class GameIntroController {
                         updateCountdownLabel();
                     } else {
                         countdownTimeline.stop();
-                        // 🔥 여기서 바로 GameBoard 로 전환 + 네트워크 연결
                         openGameBoard();
                     }
                 })
         );
+
         countdownTimeline.setCycleCount(Timeline.INDEFINITE);
         countdownTimeline.playFromStart();
     }
@@ -80,104 +82,244 @@ public class GameIntroController {
         countdownLabel.setText(remainSeconds + "초 뒤에 시작합니다.");
     }
 
-    /**
-     * GameBoardView.fxml 을 직접 로드하면서
-     * - GameBoardController 가져오기
-     * - OmokClient 와 서로 연결
-     * - Stage 에 Scene 교체
-     */
+
+    /* GameBoardView.fxml 로 전환 + NetworkClient 바인딩 + 서버 메시지 처리 등록 */
     private void openGameBoard() {
         try {
-            // 1) FXML 로드
             FXMLLoader loader = new FXMLLoader(
                     getClass().getResource("/fxml/game/GameBoardView.fxml")
             );
+
             Parent root = loader.load();
+            boardController = loader.getController();
 
-            // 2) 컨트롤러 꺼내오기
-            GameBoardController controller = loader.getController();
+            // 1:1 기준 셋업
+            boardController.configureForOneVsOne(true);
 
-            // 3) 1:1 모드 레이아웃 설정 (항상 나는 아래)
-            controller.configureForOneVsOne(true);
-
-            // 4) 네트워크 클라이언트 가져오기
+            // 네트워크 연결 가져오기
             OmokClient client = OmokClient.getInstance();
 
-            // 5) GameBoard → 서버 방향 (말풍선, 돌 두기, SharedStone 전송)
-            controller.bindNetwork(new GameBoardController.NetworkClient() {
+            // GameBoard → 서버
+            boardController.bindNetwork(new GameBoardController.NetworkClient() {
+
                 @Override
                 public void sendCheer(String msg) {
-                    // CHEER <텍스트>
                     client.send("CHEER " + msg);
                 }
 
                 @Override
                 public void sendPlace(int row, int col) {
-                    // PLACE r c
                     client.send("PLACE " + row + " " + col);
                 }
 
                 @Override
                 public void sendSharedStoneStart() {
-                    // SharedStone 카드 사용 시작 알림
-                    // 예: SHARED_STONE_START
                     client.send("SHARED_STONE_START");
                 }
 
                 @Override
                 public void sendSharedStoneTarget(int row, int col) {
-                    // SharedStone 타겟 좌표 전송
-                    // 예: SHARED_STONE_TARGET r c
                     client.send("SHARED_STONE_TARGET " + row + " " + col);
+                }
+
+                @Override
+                public void sendBombStart() {
+                    client.send("BOMB_START");
+                }
+
+                @Override
+                public void sendBombTarget(int row, int col) {
+                    client.send("BOMB_TARGET " + row + " " + col);
+                }
+
+                @Override
+                public void sendTimeLockStart() {
+                    client.send("TIMELOCK_START");
+                }
+
+                @Override
+                public void sendSwapStart() {
+                    client.send("SWAP_START");
+                }
+
+                @Override
+                public void sendSwapTarget(int myR, int myC, int oppR, int oppC) {
+                    client.send("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
+                }
+
+                @Override
+                public void sendDoubleMoveStart() {
+                    client.send("DOUBLE_MOVE_START");
+                }
+
+                @Override
+                public void sendRemoveStart() {
+                    client.send("REMOVE_START");
+                }
+
+                @Override
+                public void sendRemoveTarget(int row, int col) {
+                    client.send("REMOVE_TARGET " + row + " " + col);
+                }
+
+                @Override
+                public void sendShieldBlockForRemove() {
+                    client.send("SHIELD_BLOCK_REMOVE");
+                }
+
+                @Override
+                public void sendShieldBlockForSwap() {
+                    client.send("SHIELD_BLOCK_SWAP");
+                }
+
+                @Override
+                public void sendTurnEnd() {
+                    client.send("TURN_END");
                 }
             });
 
-            // 6) 서버 → GameBoard 방향 (메시지 수신 처리)
+            // 서버 → GameBoard 처리
             client.setMessageHandler(line -> {
-                System.out.println("[CLIENT] recv: " + line);
-
-                // 🔥 모든 UI 변경은 JavaFX Application Thread에서 실행
-                Platform.runLater(() -> {
-                    if (line.startsWith("CHEER ")) {
-                        String text = line.substring("CHEER ".length());
-                        controller.onCheerReceivedFromOpponent(text);
-
-                    } else if (line.startsWith("PLACE ")) {
-                        String[] parts = line.split("\\s+");
-                        if (parts.length >= 3) {
-                            try {
-                                int r = Integer.parseInt(parts[1]);
-                                int c = Integer.parseInt(parts[2]);
-                                controller.onPlaceFromOpponent(r, c);
-                            } catch (NumberFormatException ignored) {}
-                        }
-
-                        // 🔥 SharedStone 관련 메시지
-                    } else if (line.startsWith("SHARED_STONE_START")) {
-                        // 상대가 SharedStone 카드 사용 시작
-                        controller.onSharedStoneStartFromOpponent();
-
-                    } else if (line.startsWith("SHARED_STONE_TARGET")) {
-                        // 상대가 공용돌로 만든 좌표 수신
-                        String[] parts = line.split("\\s+");
-                        if (parts.length >= 3) {
-                            try {
-                                int r = Integer.parseInt(parts[1]);
-                                int c = Integer.parseInt(parts[2]);
-                                controller.onSharedStoneTargetFromOpponent(r, c);
-                            } catch (NumberFormatException ignored) {}
-                        }
-                    }
-                    // MATCH, ECHO 등은 다른 화면에서 처리
-                });
+                Platform.runLater(() -> handleServerMessage(line));
             });
 
-            // 7) 실제 화면 전환 (Intro -> Board)
+            // 화면 전환
             Stage stage = (Stage) firstPlayerLabel.getScene().getWindow();
             stage.setScene(new Scene(root));
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    /** 서버 메시지를 GameBoardController 로 전달하는 핵심 처리 */
+    private void handleServerMessage(String line) {
+
+        if (boardController == null) return;
+
+        System.out.println("[GameIntro] recv: " + line);
+
+        // 말풍선
+        if (line.startsWith("CHEER ")) {
+            boardController.onCheerReceivedFromOpponent(
+                    line.substring("CHEER ".length())
+            );
+            return;
+        }
+
+        // 상대 돌 두기
+        if (line.startsWith("PLACE ")) {
+            String[] p = line.split("\\s+");
+            if (p.length >= 3) {
+                int r = Integer.parseInt(p[1]);
+                int c = Integer.parseInt(p[2]);
+                boardController.onPlaceFromOpponent(r, c);
+            }
+            return;
+        }
+
+        // 🔄 서버 턴 전달
+        if (line.startsWith("TURN ")) {
+            boardController.onTurnFromServer(
+                    line.substring("TURN ".length()).trim()
+            );
+            return;
+        }
+
+        // 상대방 탈주
+        if (line.equals("OPPONENT_LEFT")) {
+            boardController.onOpponentLeft();
+            return;
+        }
+
+        // SharedStone 카드
+        if (line.equals("SHARED_STONE_START")) {
+            boardController.onSharedStoneStartFromOpponent();
+            return;
+        }
+
+        if (line.startsWith("SHARED_STONE_TARGET")) {
+            String[] p = line.split("\\s+");
+            if (p.length >= 3) {
+                boardController.onSharedStoneTargetFromOpponent(
+                        Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2])
+                );
+            }
+            return;
+        }
+
+        // Bomb!! 카드
+        if (line.equals("BOMB_START")) {
+            boardController.onBombStartFromOpponent();
+            return;
+        }
+
+        if (line.startsWith("BOMB_TARGET")) {
+            String[] p = line.split("\\s+");
+            if (p.length >= 3)
+                boardController.onBombTargetFromOpponent(
+                        Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2])
+                );
+            return;
+        }
+
+        // Time Lock 카드
+        if (line.equals("TIMELOCK_START")) {
+            boardController.onTimeLockStartFromOpponent();
+            return;
+        }
+
+        // Swap 카드
+        if (line.equals("SWAP_START")) {
+            boardController.onSwapStartFromOpponent();
+            return;
+        }
+
+        if (line.startsWith("SWAP_TARGET")) {
+            String[] p = line.split("\\s+");
+            if (p.length >= 5)
+                boardController.onSwapTargetFromOpponent(
+                        Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2]),
+                        Integer.parseInt(p[3]),
+                        Integer.parseInt(p[4])
+                );
+            return;
+        }
+
+        // Double Move 카드
+        if (line.equals("DOUBLE_MOVE_START")) {
+            boardController.onDoubleMoveStartFromOpponent();
+            return;
+        }
+
+        // Remove 카드
+        if (line.equals("REMOVE_START")) {
+            boardController.onRemoveStartFromOpponent();
+            return;
+        }
+
+        if (line.startsWith("REMOVE_TARGET")) {
+            String[] p = line.split("\\s+");
+            if (p.length >= 3)
+                boardController.onRemoveTargetFromOpponent(
+                        Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2])
+                );
+            return;
+        }
+
+        // Shield 방어
+        if (line.equals("SHIELD_BLOCK_REMOVE")) {
+            boardController.onShieldBlockRemoveFromOpponent();
+            return;
+        }
+
+        if (line.equals("SHIELD_BLOCK_SWAP")) {
+            boardController.onShieldBlockSwapFromOpponent();
+            return;
         }
     }
 }

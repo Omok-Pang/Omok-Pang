@@ -2,34 +2,40 @@ package com.omokpang.controller.effect;
 
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
-import javafx.scene.layout.Pane;
+import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
 /**
- * 역할: Swap 결과 안내 오버레이를 일정 시간 보여주고 자동으로 닫은 뒤 콜백 실행
+ * 상대가 Swap 카드를 사용했을 때,
+ * 중앙에 "돌의 위치가 교환되었습니다" 안내를 잠깐 보여주는 오버레이.
  */
 public class SwapNoticeController {
 
+    @FXML private StackPane rootOverlay;
+    @FXML private Label messageLabel;
+
     @FXML
-    private StackPane root;   // fx:id="root"
+    public void initialize() {
+        if (messageLabel != null &&
+                (messageLabel.getText() == null || messageLabel.getText().isBlank())) {
+            messageLabel.setText("상대방이 공격카드를 사용했습니다. 돌의 위치가 교환되었습니다.");
+        }
 
-    /**
-     * @param parent    centerStack 같은 부모 컨테이너
-     * @param onFinished 2초 후 오버레이 제거가 끝나고 실행할 콜백 (없으면 null)
-     */
-    public void showOn(StackPane parent, Runnable onFinished) {
-        parent.getChildren().add(root);
+        if (rootOverlay != null) {
+            rootOverlay.setMouseTransparent(false); // 아래 클릭 잠깐 막기
+        }
 
+        // 2초 후 자동 제거
         PauseTransition pause = new PauseTransition(Duration.seconds(2));
-        pause.setOnFinished(e -> {
-            if (root.getParent() instanceof Pane p) {
-                p.getChildren().remove(root);
-            }
-            if (onFinished != null) {
-                onFinished.run();
-            }
-        });
+        pause.setOnFinished(e -> close());
         pause.play();
+    }
+
+    private void close() {
+        if (rootOverlay == null) return;
+        if (rootOverlay.getParent() instanceof StackPane parent) {
+            parent.getChildren().remove(rootOverlay);
+        }
     }
 }

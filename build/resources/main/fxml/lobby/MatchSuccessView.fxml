@@ -8,10 +8,10 @@
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.omokpang.controller.lobby.MatchSuccessController"
-            prefWidth="750" prefHeight="600">
+            prefWidth="800" prefHeight="800">
 
-    <!-- ⭐ 배경 (매칭뷰와 동일) -->
-    <ImageView fitWidth="750" fitHeight="600" preserveRatio="false"
+    <!-- ⭐ 배경: 800x800 전체 꽉 채우기 -->
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false"
                AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0"
                AnchorPane.rightAnchor="0" AnchorPane.bottomAnchor="0">
         <image>
@@ -22,7 +22,7 @@
     <!-- ⭐ 중앙 레이아웃 -->
     <VBox alignment="CENTER"
           spacing="25"
-          prefWidth="750" prefHeight="600"
+          prefWidth="800" prefHeight="800"
           AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
           AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
 

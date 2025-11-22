@@ -6,32 +6,38 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           prefWidth="750" prefHeight="600"
-           fx:controller="com.omokpang.controller.splash.SplashController">  <!-- ★ 컨트롤러 지정 -->
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.splash.SplashController"
+            prefWidth="800" prefHeight="800">
 
-    <!-- 배경 -->
-    <children>
-        <ImageView fitWidth="850" fitHeight="700" preserveRatio="false">
-            <image><Image url="/images/bg_start.png"/></image>
-        </ImageView>
+    <ImageView
+            AnchorPane.topAnchor="0"
+            AnchorPane.bottomAnchor="0"
+            AnchorPane.leftAnchor="0"
+            AnchorPane.rightAnchor="0"
+            preserveRatio="false"
+            fitWidth="800"
+            fitHeight="800">
+        <image><Image url="/images/bg_start.png"/></image>
+    </ImageView>
 
-        <!-- 하단 START 버튼 -->
-        <VBox alignment="BOTTOM_CENTER" spacing="12" StackPane.alignment="BOTTOM_CENTER">
-            <padding><Insets top="0" right="0" bottom="28" left="0"/></padding>
-            <children>
-                <Button fx:id="btnStart"
-                        style="-fx-background-color: transparent;"
-                        onAction="#handleStart">
-                    <graphic>
-                        <ImageView fitWidth="180" preserveRatio="true">
-                            <image><Image url="/images/button/btn_startbtn.png"/></image>
-                        </ImageView>
-                    </graphic>
-                </Button>
-            </children>
-        </VBox>
-    </children>
-</StackPane>
+    <!-- 하단 START 버튼 -->
+    <VBox alignment="BOTTOM_CENTER"
+          spacing="12"
+          AnchorPane.bottomAnchor="28"
+          AnchorPane.leftAnchor="0"
+          AnchorPane.rightAnchor="0">
+
+        <Button fx:id="btnStart"
+                style="-fx-background-color: transparent;"
+                onAction="#handleStart">
+            <graphic>
+                <ImageView fitWidth="180" preserveRatio="true">
+                    <image><Image url="/images/button/btn_startbtn.png"/></image>
+                </ImageView>
+            </graphic>
+        </Button>
+    </VBox>
+</AnchorPane>

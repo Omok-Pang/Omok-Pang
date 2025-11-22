@@ -1,39 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  역할: Swap 카드를 사용한 플레이어에게
-       "내 돌 1개 + 상대 돌 1개 선택 후 Enter" 안내를 보여주는 오버레이
--->
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
 
-<StackPane xmlns="http://javafx.com/javafx/21"
+<StackPane fx:id="rootOverlay"
+           xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.omokpang.controller.effect.SwapSelectGuideController"
-           fx:id="root"
-           prefWidth="750" prefHeight="600"
-           style="-fx-background-color: rgba(0,0,0,0.40);">
+           alignment="BOTTOM_CENTER"
+           style="-fx-background-color: transparent;">
 
-    <!-- 화면 하단 안내 박스 -->
-    <StackPane alignment="BOTTOM_CENTER">
-        <StackPane.margin>
-            <Insets bottom="20"/>
-        </StackPane.margin>
+    <VBox StackPane.alignment="BOTTOM_CENTER"
+          alignment="CENTER"
+          spacing="8"
+          prefHeight="140"
+          minHeight="140"
+          maxHeight="140"
+          style="-fx-background-color: rgba(0,0,0,0.75);
+                 -fx-background-radius: 24;
+                 -fx-padding: 20 40 20 40;">
+        <Label fx:id="guideLabel"
+               text="변경하고 싶은 자신의 돌 1개와 상대방 돌 1개를 선택하세요&#10;자신의 돌 선택 -> 변경하고 싶은 상대방의 돌 선택"
+               wrapText="true"
+               style="-fx-text-fill: white;
+                      -fx-font-size: 18px;
+                      -fx-font-weight: bold;
+                      -fx-alignment: center;" />
+    </VBox>
 
-        <StackPane maxWidth="720" maxHeight="130"
-                   style="
-                       -fx-background-color: rgba(0,0,0,0.85);
-                       -fx-background-radius: 24;
-                       -fx-padding: 22 40 22 40;
-                   ">
-            <Label text="변경하고 싶은 자신의 돌 1개와 상대방 돌 1개를 선택 후 Enter를 눌러주세요"
-                   wrapText="true"
-                   textAlignment="CENTER"
-                   style="
-                       -fx-text-fill: white;
-                       -fx-font-size: 22;
-                       -fx-font-weight: 800;
-                   "/>
-        </StackPane>
-    </StackPane>
 </StackPane>
