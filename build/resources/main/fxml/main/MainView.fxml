@@ -11,11 +11,12 @@
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.omokpang.controller.main.MainController"
-            prefWidth="750" prefHeight="600">
+            prefWidth="800" prefHeight="800">
 
     <!-- ====================== 배경 ====================== -->
-    <ImageView fitWidth="750" fitHeight="600"
-               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0">
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false"
+               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0"
+               AnchorPane.rightAnchor="0" AnchorPane.bottomAnchor="0">
         <image>
             <Image url="/images/bg_darkmode.png"/>
         </image>
@@ -90,81 +91,109 @@
     </HBox>
 
     <!-- ====================== 개인전 / 팀전 텍스트 ====================== -->
-    <Label text="개인전"
-           AnchorPane.leftAnchor="195" AnchorPane.topAnchor="140"
-           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
+    <StackPane AnchorPane.leftAnchor="40"
+               AnchorPane.rightAnchor="40"
+               AnchorPane.topAnchor="130"
+               AnchorPane.bottomAnchor="160">
 
-    <Label text="팀전"
-           AnchorPane.leftAnchor="495" AnchorPane.topAnchor="140"
-           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
+        <children>
+            <!-- 반투명 배경 패널 -->
+            <Pane prefWidth="720" prefHeight="340"
+                  maxWidth="720" maxHeight="340"
+                  style="-fx-background-color: rgba(0,0,0,0.35);
+                         -fx-background-radius: 30;" />
 
-    <!-- ====================== 개인전 이미지 버튼 ====================== -->
-    <Button fx:id="btnModeSolo"
-            onAction="#handleSelectSolo"
-            style="-fx-background-color: transparent;"
-            AnchorPane.leftAnchor="85" AnchorPane.topAnchor="190">
-        <graphic>
-            <ImageView fx:id="imgSolo" fitWidth="270" preserveRatio="true">
-                <image>
-                    <Image url="/images/main/single_gray.png"/>
-                </image>
-            </ImageView>
-        </graphic>
-    </Button>
+            <!-- 실제 콘텐츠 -->
+            <HBox alignment="CENTER" spacing="80" maxWidth="720"
+                  style="-fx-padding: 40 60 40 60;">
 
-    <!-- ====================== 팀전 이미지 버튼 ====================== -->
-    <Button fx:id="btnModeTeam"
-            onAction="#handleSelectTeam"
-            style="-fx-background-color: transparent;"
-            AnchorPane.leftAnchor="380" AnchorPane.topAnchor="190">
-        <graphic>
-            <ImageView fx:id="imgTeam" fitWidth="260" preserveRatio="true">
-                <image>
-                    <Image url="/images/main/team_gray.png"/>
-                </image>
-            </ImageView>
-        </graphic>
-    </Button>
+                <!-- 개인전 컬럼 -->
+                <VBox alignment="CENTER" spacing="18">
 
-    <!-- ====================== 2인 / 4인 버튼 ====================== -->
-    <Button fx:id="btnSize2"
-            onAction="#handleSelectSize2"
-            style="-fx-background-color: transparent;"
-            AnchorPane.leftAnchor="83" AnchorPane.topAnchor="348">
-        <graphic>
-            <ImageView fx:id="imgSize2" fitWidth="132" preserveRatio="true">
-                <image>
-                    <Image url="/images/main/2p_gray.png"/>
-                </image>
-            </ImageView>
-        </graphic>
-    </Button>
+                    <Label text="개인전"
+                           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
 
-    <Button fx:id="btnSize4"
-            onAction="#handleSelectSize4"
-            style="-fx-background-color: transparent;"
-            AnchorPane.leftAnchor="220" AnchorPane.topAnchor="348">
-        <graphic>
-            <ImageView fx:id="imgSize4" fitWidth="132" preserveRatio="true">
-                <image>
-                    <Image url="/images/main/4p_gray.png"/>
-                </image>
-            </ImageView>
-        </graphic>
-    </Button>
+                    <!-- 개인전 이미지 버튼 -->
+                    <Button fx:id="btnModeSolo"
+                            onAction="#handleSelectSolo"
+                            style="-fx-background-color: transparent;">
+                        <graphic>
+                            <ImageView fx:id="imgSolo" fitWidth="270" preserveRatio="true">
+                                <image>
+                                    <Image url="/images/main/single_gray.png"/>
+                                </image>
+                            </ImageView>
+                        </graphic>
+                    </Button>
 
-    <!-- ====================== 게임 시작 버튼 ====================== -->
-    <Button fx:id="btnStartGame"
-            onAction="#handleStartGame"
-            style="-fx-background-color: transparent;"
-            AnchorPane.bottomAnchor="40" AnchorPane.leftAnchor="275">
-        <graphic>
-            <ImageView fitWidth="200" preserveRatio="true">
-                <image>
-                    <Image url="/images/button/btn_gamestartbtn.png"/>
-                </image>
-            </ImageView>
-        </graphic>
-    </Button>
+                    <!-- 2인 / 4인 버튼 -->
+                    <HBox spacing="6" alignment="CENTER">
+                        <Button fx:id="btnSize2"
+                                onAction="#handleSelectSize2"
+                                style="-fx-background-color: transparent;">
+                            <graphic>
+                                <ImageView fx:id="imgSize2" fitWidth="132" preserveRatio="true">
+                                    <image>
+                                        <Image url="/images/main/2p_gray.png"/>
+                                    </image>
+                                </ImageView>
+                            </graphic>
+                        </Button>
+
+                        <Button fx:id="btnSize4"
+                                onAction="#handleSelectSize4"
+                                style="-fx-background-color: transparent;">
+                            <graphic>
+                                <ImageView fx:id="imgSize4" fitWidth="132" preserveRatio="true">
+                                    <image>
+                                        <Image url="/images/main/4p_gray.png"/>
+                                    </image>
+                                </ImageView>
+                            </graphic>
+                        </Button>
+                    </HBox>
+                </VBox>
+
+                <!-- 팀전 컬럼 -->
+                <VBox alignment="CENTER" spacing="18">
+
+                    <Label text="팀전"
+                           style="-fx-text-fill:white; -fx-font-size:22; -fx-font-weight:800;"/>
+
+                    <!-- 팀전 이미지 버튼 -->
+                    <Button fx:id="btnModeTeam"
+                            onAction="#handleSelectTeam"
+                            style="-fx-background-color: transparent;">
+                        <graphic>
+                            <ImageView fx:id="imgTeam" fitWidth="260" preserveRatio="true">
+                                <image>
+                                    <Image url="/images/main/team_gray.png"/>
+                                </image>
+                            </ImageView>
+                        </graphic>
+                    </Button>
+
+                </VBox>
+
+            </HBox>
+        </children>
+    </StackPane>
+
+    <!-- ====================== 하단: 게임 시작 버튼 (가운데) ====================== -->
+    <HBox alignment="CENTER"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
+          AnchorPane.bottomAnchor="40">
+        <Button fx:id="btnStartGame"
+                onAction="#handleStartGame"
+                style="-fx-background-color: transparent;">
+            <graphic>
+                <ImageView fitWidth="200" preserveRatio="true">
+                    <image>
+                        <Image url="/images/button/btn_gamestartbtn.png"/>
+                    </image>
+                </ImageView>
+            </graphic>
+        </Button>
+    </HBox>
 
 </AnchorPane>

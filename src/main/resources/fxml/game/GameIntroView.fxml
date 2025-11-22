@@ -10,11 +10,11 @@
 
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.omokpang.controller.game.GameIntroController"
-           prefWidth="750" prefHeight="600">
+           prefWidth="800" prefHeight="800">
 
     <!-- 배경 이미지 -->
     <children>
-        <ImageView fitWidth="750" fitHeight="600" preserveRatio="false">
+        <ImageView fitWidth="800" fitHeight="800" preserveRatio="false">
             <image>
                 <Image url="/images/bg_lightmode.png"/>
             </image>

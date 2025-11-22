@@ -8,10 +8,10 @@
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.omokpang.controller.lobby.MatchingController"
-            prefWidth="750" prefHeight="600">
+            prefWidth="800" prefHeight="800">
 
-    <!-- ⭐ 1) 피그마처럼 꽉 차는 우주 배경 -->
-    <ImageView fitWidth="750    " fitHeight="600" preserveRatio="false"
+    <!-- ⭐ 1) 우주 배경: 800x800 전체 꽉 채우기 -->
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false"
                AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0"
                AnchorPane.rightAnchor="0" AnchorPane.bottomAnchor="0">
         <image>
@@ -19,10 +19,10 @@
         </image>
     </ImageView>
 
-    <!-- ⭐ 2) 중앙 세로 레이아웃 (피그마처럼 완전 정중앙 배치) -->
+    <!-- ⭐ 2) 중앙 세로 레이아웃 (정중앙) -->
     <VBox alignment="CENTER"
           spacing="25"
-          prefWidth="750" prefHeight="600"
+          prefWidth="800" prefHeight="800"
           AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
           AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
 
@@ -30,14 +30,13 @@
         <Label text="유저 기다리는 중......"
                style="-fx-font-size: 44px; -fx-text-fill: white; -fx-font-weight: bold;"/>
 
-        <!-- ⭐ 행성 중앙 (피그마처럼 약간 커짐) -->
+        <!-- ⭐ 행성 중앙 -->
         <ImageView fx:id="myAvatar"
                    fitWidth="200" fitHeight="200">
             <image>
                 <Image url="@/images/user/user3.png" />
             </image>
         </ImageView>
-
 
         <!-- 액션 버튼 -->
         <Button fx:id="cancelBtn"

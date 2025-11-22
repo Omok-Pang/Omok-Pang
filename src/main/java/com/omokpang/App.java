@@ -16,24 +16,29 @@ import javafx.stage.Stage;
 public class App extends Application {
 
     // 앱 전역 기본 크기(디자인 기준)
-    public static final double APP_WIDTH = 750;
-    public static final double APP_HEIGHT = 600;
+    public static final double APP_WIDTH = 800;
+    public static final double APP_HEIGHT = 800;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        // 1) 최초 화면: SplashView.fxml 로드
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Splash/SplashView.fxml"));
 
-        // 2) Scene 생성 및 Stage 세팅
-        Scene scene = new Scene(root);
-        // 필요하면 스타일시트: scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Splash/SplashView.fxml"));
+        Scene scene = new Scene(root, APP_WIDTH, APP_HEIGHT);
 
         primaryStage.setTitle("OmokPang");
         primaryStage.setScene(scene);
-        primaryStage.setResizable(false); // 고정 크기
+
+        // 🔥 윈도우 크기 강제 고정
+        primaryStage.setWidth(APP_WIDTH);
+        primaryStage.setHeight(APP_HEIGHT);
+        primaryStage.setMinWidth(APP_WIDTH);
+        primaryStage.setMinHeight(APP_HEIGHT);
+        primaryStage.setMaxWidth(APP_WIDTH);
+        primaryStage.setMaxHeight(APP_HEIGHT);
+
+        primaryStage.setResizable(false);
         primaryStage.show();
 
-        // 3) 전역 라우터 초기화(다른 컨트롤러에서 화면 전환 쉽게 사용)
         SceneRouter.init(primaryStage);
     }
 

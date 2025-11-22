@@ -8,10 +8,9 @@
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.omokpang.controller.splash.RankingController"
-            prefWidth="750" prefHeight="600">
+            prefWidth="800" prefHeight="800">
 
-    <!-- ⭐ 배경 -->
-    <ImageView fitWidth="750" fitHeight="600" preserveRatio="false"
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false"
                AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0"
                AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0">
         <image>
@@ -19,7 +18,6 @@
         </image>
     </ImageView>
 
-    <!-- ⭐ Glass Ranking Box -->
     <VBox alignment="TOP_CENTER"
           spacing="20"
           AnchorPane.leftAnchor="80"
@@ -36,7 +34,6 @@
                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 40, 0.2, 0, 6);
           ">
 
-        <!-- 타이틀 이미지 -->
         <ImageView fx:id="imgRankingTitle"
                    fitWidth="250"
                    preserveRatio="true">
@@ -45,7 +42,6 @@
             </image>
         </ImageView>
 
-        <!-- ⭐ 스크롤 영역 (배경 투명) -->
         <ScrollPane fitToWidth="true"
                     prefHeight="450"
                     hbarPolicy="NEVER"
@@ -56,7 +52,6 @@
                         -fx-padding: 0;
                     ">
 
-            <!-- 내부 목록 -->
             <VBox fx:id="rankingList"
                   spacing="15"
                   alignment="TOP_CENTER"
@@ -65,7 +60,6 @@
 
     </VBox>
 
-    <!-- 🔙 뒤로가기 버튼 -->
     <Button fx:id="btnBack"
             text="뒤로가기"
             onAction="#handleBack"

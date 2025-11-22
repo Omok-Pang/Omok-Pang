@@ -25,11 +25,20 @@ public final class SceneRouter {
         try {
             FXMLLoader loader = new FXMLLoader(SceneRouter.class.getResource(fxmlPath));
             Parent root = loader.load();
-            Scene scene = new Scene(root);
+            Scene scene = new Scene(root, App.APP_WIDTH, App.APP_HEIGHT); // ← 크기 강제
+
             stage.setScene(scene);
+            stage.setWidth(App.APP_WIDTH);
+            stage.setHeight(App.APP_HEIGHT);
+            stage.setMinWidth(App.APP_WIDTH);
+            stage.setMinHeight(App.APP_HEIGHT);
+            stage.setMaxWidth(App.APP_WIDTH);
+            stage.setMaxHeight(App.APP_HEIGHT);
+
+            stage.setResizable(false);
             stage.show();
         } catch (Exception e) {
-            e.printStackTrace(); // 필요시 로깅으로 교체
+            e.printStackTrace();
         }
     }
 }
