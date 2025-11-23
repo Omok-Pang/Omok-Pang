@@ -40,30 +40,70 @@ public class MatchSuccessController {
         if (mode == null) mode = "default";
 
         if (players == null || players.length == 0) {
-            // 혹시라도 값이 없으면 기존 하드코딩으로 fallback
+            // 값 없을 때 fallback
             addPlayer("내행성", "/images/user/user3.png");
             addPlayer("상대방", "/images/user/user4.png");
             startCountdownToCardSelect();
             return;
         }
 
-        // ================== 1. 아바타 배정 (같은 방이면 항상 같은 결과) ==================
-        // 기본 아바타 후보 4개
-        List<String> avatarPool = new ArrayList<>(Arrays.asList(
-                "/images/user/user1.png",
-                "/images/user/user2.png",
-                "/images/user/user3.png",
-                "/images/user/user4.png"
-        ));
-
-        // 🔑 mode + players 를 이용해 seed 생성 → 같은 매칭이면 두 클라이언트가 동일 seed 사용
-        String key = mode + "|" + String.join(",", players);
-        long seed = key.hashCode();
-        Collections.shuffle(avatarPool, new Random(seed));
+        // ================== 1. 팀 정보 / 아바타 배정 ==================
+        boolean isTeamMode = "2v2".equals(mode);   // 🔥 팀전 여부 확인
 
         String[] assignedAvatars = new String[players.length];
-        for (int i = 0; i < players.length; i++) {
-            assignedAvatars[i] = avatarPool.get(i);  // 인원수 <= 4 라고 가정
+
+        if (isTeamMode && players.length == 4) {
+            // ---------- 2:2 팀전 ----------
+
+            // 팀 정보: 0팀 / 1팀 (0,1,0,1 고정)
+            int[] team = new int[4];
+            team[0] = 0; // A팀
+            team[1] = 1; // B팀
+            team[2] = 0; // A팀
+            team[3] = 1; // B팀
+            MatchSession.setPlayerTeam(team);
+
+            // 아바타 후보 4개에서 "팀별 대표 아바타 2개"만 사용
+            List<String> avatarPool = new ArrayList<>(Arrays.asList(
+                    "/images/user/user1.png",
+                    "/images/user/user2.png",
+                    "/images/user/user3.png",
+                    "/images/user/user4.png"
+            ));
+
+            // 같은 방이면 두 클라이언트가 항상 같은 조합이 되도록 seed 고정
+            String key = mode + "|" + String.join(",", players);
+            long seed = key.hashCode();
+            Collections.shuffle(avatarPool, new Random(seed));
+
+            String team0Avatar = avatarPool.get(0); // 팀 A 대표 아바타
+            String team1Avatar = avatarPool.get(1); // 팀 B 대표 아바타
+
+            for (int i = 0; i < players.length; i++) {
+                assignedAvatars[i] = (team[i] == 0) ? team0Avatar : team1Avatar;
+            }
+
+        } else {
+            // ---------- 개인전 (1v1 / 1v1v1v1) 기존 로직 유지 ----------
+            List<String> avatarPool = new ArrayList<>(Arrays.asList(
+                    "/images/user/user1.png",
+                    "/images/user/user2.png",
+                    "/images/user/user3.png",
+                    "/images/user/user4.png"
+            ));
+
+            String key = mode + "|" + String.join(",", players);
+            long seed = key.hashCode();
+            Collections.shuffle(avatarPool, new Random(seed));
+
+            for (int i = 0; i < players.length; i++) {
+                assignedAvatars[i] = avatarPool.get(i);
+            }
+
+            // 개인전이면 playerTeam 은 필요 없으면 null 로 둬도 됨
+            if (players.length != 4) {
+                MatchSession.setPlayerTeam(null);
+            }
         }
 
         // 🔥 이 아바타 정보를 MatchSession에 저장 → GameBoard에서 재사용

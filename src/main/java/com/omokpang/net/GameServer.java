@@ -23,6 +23,28 @@ public class GameServer {
     // 1:1 매칭 대기열 (닉네임만 저장)
     private static final Queue<String> queue1v1 = new ArrayDeque<>();
 
+    // 4인 FFA 큐
+    private static final Queue<String> queueFfa4 = new ArrayDeque<>();
+
+    // 2:2 팀전 큐
+    private static final Queue<String> queue2v2 = new ArrayDeque<>();
+
+    // "어떤 닉네임이 어떤 방에 속해 있는지"
+    private static final Map<String, Room> roomMap = new ConcurrentHashMap<>();
+
+    // 간단한 Room 구조
+    private static class Room {
+        String mode;           // "1v1" 또는 "1v1v1v1"
+        String[] players;      // 방에 속한 닉네임들 (2 or 4)
+        int turnIndex;         // 현재 턴 플레이어 인덱스 (0~n-1)
+
+        Room(String mode, String[] players, int turnIndex) {
+            this.mode = mode;
+            this.players = players;
+            this.turnIndex = turnIndex;
+        }
+    }
+
     // 매칭된 상대 매핑 (양방향)
     private static final Map<String, String> opponentMap = new ConcurrentHashMap<>();
 
@@ -46,157 +68,284 @@ public class GameServer {
         }
     }
 
-    // 말풍선 전송: from → 그의 상대에게만
+    // 방 안의 from 을 제외한 모든 플레이어에게 message 전송
+    private static void broadcastToRoomExcept(Room room, String from, String message) {
+        for (String p : room.players) {
+            if (p.equals(from)) continue; // 나 자신은 제외
+            PrintWriter out = clientMap.get(p);
+            if (out != null) {
+                out.println(message);
+            }
+        }
+    }
+
+    // 말풍선 전송: from → 같은 방의 다른 모든 플레이어 or 1:1 상대
     private static void forwardCheer(String from, String text) {
+        Room room = roomMap.get(from);
+        String msg = "CHEER " + from + " " + text;
+
+        // 방이 있으면: 같은 방의 나를 제외한 모두에게
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
+        // 방이 없으면 기존 1:1
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("CHEER " + text);
+            outOpp.println(msg);
         }
     }
 
-    // 돌 두기 전송: from → 그의 상대에게만
+    // 돌 두기 전송: from → 같은 방의 다른 모든 플레이어 or 1:1 상대
     private static void forwardPlace(String from, int r, int c) {
+        Room room = roomMap.get(from);
+        String msg = "PLACE " + r + " " + c;
+
+        // 🔥 방이 있으면 방 전체(나 제외)에게 브로드캐스트
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
+        // 👉 방이 없으면 기존 1:1
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("PLACE " + r + " " + c);
+            outOpp.println(msg);
         }
     }
 
-    // SharedStone 시작 알림: from -> 그의 상대에게만
+    // SharedStone 시작 알림: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardSharedStoneStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "SHARED_STONE_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SHARED_STONE_START");
+            outOpp.println(msg);
         }
     }
 
-    // SharedStone 타겟 좌표 전달: from -> 그의 상대에게만
+    // SharedStone 타겟 좌표 전달: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardSharedStoneTarget(String from, int r, int c) {
+        Room room = roomMap.get(from);
+        String msg = "SHARED_STONE_TARGET " + r + " " + c;
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SHARED_STONE_TARGET " + r + " " + c);
+            outOpp.println(msg);
         }
     }
 
     // Bomb!! 시작 알림
     private static void forwardBombStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "BOMB_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("BOMB_START");
+            outOpp.println(msg);
         }
     }
 
     // Bomb!! 타겟 좌표 전달
     private static void forwardBombTarget(String from, int r, int c) {
+        Room room = roomMap.get(from);
+        String msg = "BOMB_TARGET " + r + " " + c;
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("BOMB_TARGET " + r + " " + c);
+            outOpp.println(msg);
         }
     }
 
-    // Time Lock 시작 알림: from -> 그의 상대에게만
+    // Time Lock 시작 알림: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardTimeLockStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "TIMELOCK_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("TIMELOCK_START");
+            outOpp.println(msg);
         }
     }
 
-    // Swap 시작 알림: from -> 그의 상대에게만
+    // Swap 시작 알림: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardSwapStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "SWAP_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SWAP_START");
+            outOpp.println(msg);
         }
     }
 
-    // Swap 타겟 좌표 전달: from -> 그의 상대에게만
+    // Swap 타겟 좌표 전달: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardSwapTarget(String from, int myR, int myC, int oppR, int oppC) {
+        Room room = roomMap.get(from);
+        String msg = "SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC;
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
+            outOpp.println(msg);
         }
     }
 
-    // DoubleMove 시작 알림: from -> 그의 상대에게만
+    // DoubleMove 시작 알림: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardDoubleMoveStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "DOUBLE_MOVE_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("DOUBLE_MOVE_START");
+            outOpp.println(msg);
         }
     }
 
-    // Remove 시작 알림: from -> 그의 상대에게만
+    // Remove 시작 알림: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardRemoveStart(String from) {
+        Room room = roomMap.get(from);
+        String msg = "REMOVE_START";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("REMOVE_START");
+            outOpp.println(msg);
         }
     }
 
-    // Remove 타겟 좌표 전달: from -> 그의 상대에게만
+    // Remove 타겟 좌표 전달: from -> 같은 방의 다른 플레이어 or 1:1 상대
     private static void forwardRemoveTarget(String from, int r, int c) {
+        Room room = roomMap.get(from);
+        String msg = "REMOVE_TARGET " + r + " " + c;
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("REMOVE_TARGET " + r + " " + c);
+            outOpp.println(msg);
         }
     }
 
     // Shield 방어 – Remove 무효화 알림
     private static void forwardShieldBlockRemove(String from) {
+        Room room = roomMap.get(from);
+        String msg = "SHIELD_BLOCK_REMOVE";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SHIELD_BLOCK_REMOVE");
+            outOpp.println(msg);
         }
     }
 
     // Shield 방어 – Swap 무효화 알림
     private static void forwardShieldBlockSwap(String from) {
+        Room room = roomMap.get(from);
+        String msg = "SHIELD_BLOCK_SWAP";
+
+        if (room != null) {
+            broadcastToRoomExcept(room, from, msg);
+            return;
+        }
+
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
         PrintWriter outOpp = clientMap.get(opp);
         if (outOpp != null) {
-            outOpp.println("SHIELD_BLOCK_SWAP");
+            outOpp.println(msg);
         }
     }
 
@@ -224,6 +373,21 @@ public class GameServer {
 
     /** TURN_END 를 받은 플레이어 닉네임 기준으로 다음 턴을 상대에게 넘김 */
     private static void handleTurnEnd(String nick) {
+        // 먼저 4인용 방부터 확인
+        Room room = roomMap.get(nick);
+        if (room != null) {
+            // 방 안에서만 턴 교체
+            if (!nick.equals(room.players[room.turnIndex])) {
+                System.out.println("[SERVER] WARN: TURN_END from non-turn player in room: " + nick);
+                return;
+            }
+            room.turnIndex = (room.turnIndex + 1) % room.players.length;
+            broadcastTurn(room);
+            return;
+        }
+
+        // 👉 room 이 없다는 건 1:1 매치(구 방식)를 쓰고 있다는 뜻이니
+        //    기존 currentTurnMap + opponentMap 로직을 그대로 둠
         String opp = opponentMap.get(nick);
         if (opp == null) {
             System.out.println("[SERVER] TURN_END from " + nick + " but no opponent.");
@@ -237,7 +401,6 @@ public class GameServer {
             return;
         }
 
-        // 다음 턴은 상대
         setCurrentTurnForPair(nick, opp, opp);
         broadcastTurnToPair(nick, opp);
     }
@@ -264,11 +427,19 @@ public class GameServer {
                     continue;
                 }
 
-                if (line.startsWith("QUEUE 1v1")) {
-                    String[] parts = line.split("\\s+", 3);
+                if (line.startsWith("QUEUE ")) {
+                    String[] parts = line.split("\\s+");
                     if (parts.length >= 3) {
-                        String nick = parts[2].trim();
-                        enqueue1v1(nick);
+                        String mode = parts[1];   // "1v1" / "1v1v1v1" / "2v2"
+                        String nick = parts[2];
+
+                        if ("1v1".equals(mode)) {
+                            enqueue1v1(nick);
+                        } else if ("1v1v1v1".equals(mode)) {
+                            enqueueFfa4(nick);
+                        } else if ("2v2".equals(mode)) {     // ✅ 추가
+                            enqueue2v2(nick);
+                        }
                     }
                     continue;
                 }
@@ -473,6 +644,111 @@ public class GameServer {
                 // 🔥 선공은 a 로 고정 (players[0] = a)
                 setCurrentTurnForPair(a, b, a);
                 broadcastTurnToPair(a, b); // TURN a
+            }
+        }
+    }
+
+    // 4인 FFA 대기열
+    private static synchronized void enqueueFfa4(String nick) {
+        if (queueFfa4.contains(nick)) return;
+
+        queueFfa4.add(nick);
+        System.out.println("[SERVER] QUEUE 1v1v1v1: " + nick +
+                " (현재 대기: " + queueFfa4.size() + ")");
+
+        if (queueFfa4.size() >= 4) {
+            String a = queueFfa4.poll();
+            String b = queueFfa4.poll();
+            String c = queueFfa4.poll();
+            String d = queueFfa4.poll();
+
+            PrintWriter outA = clientMap.get(a);
+            PrintWriter outB = clientMap.get(b);
+            PrintWriter outC = clientMap.get(c);
+            PrintWriter outD = clientMap.get(d);
+
+            if (outA != null && outB != null && outC != null && outD != null) {
+                String playersStr = a + "," + b + "," + c + "," + d;
+                String matchMsg = "MATCH 1v1v1v1 " + playersStr;
+
+                outA.println(matchMsg);
+                outB.println(matchMsg);
+                outC.println(matchMsg);
+                outD.println(matchMsg);
+
+                System.out.println("[SERVER] MATCHED 1v1v1v1: " + matchMsg);
+
+                // 🔥 방 생성 (선공은 a, 그 다음 b,c,d 순으로 턴)
+                String[] players = {a, b, c, d};
+                Room room = new Room("1v1v1v1", players, 0);
+
+                for (String p : players) {
+                    roomMap.put(p, room);
+                }
+
+                // 첫 턴 브로드캐스트
+                broadcastTurn(room);
+            }
+        }
+    }
+
+    // 해당 방의 현재 턴을 모든 플레이어에게 알리기
+    private static void broadcastTurn(Room room) {
+        String curNick = room.players[room.turnIndex];
+
+        for (String p : room.players) {
+            PrintWriter out = clientMap.get(p);
+            if (out != null) out.println("TURN " + curNick);
+        }
+
+        System.out.println("[SERVER] TURN broadcast(room=" + room.mode +
+                "): " + curNick);
+    }
+
+    // 2:2 팀전 대기열
+    private static synchronized void enqueue2v2(String nick) {
+        // 이미 큐에 있으면 중복 방지
+        if (queue2v2.contains(nick)) return;
+
+        queue2v2.add(nick);
+        System.out.println("[SERVER] QUEUE 2v2: " + nick +
+                " (현재 대기: " + queue2v2.size() + ")");
+
+        // 4명 모이면 매칭
+        if (queue2v2.size() >= 4) {
+            String a = queue2v2.poll();
+            String b = queue2v2.poll();
+            String c = queue2v2.poll();
+            String d = queue2v2.poll();
+
+            PrintWriter outA = clientMap.get(a);
+            PrintWriter outB = clientMap.get(b);
+            PrintWriter outC = clientMap.get(c);
+            PrintWriter outD = clientMap.get(d);
+
+            if (outA != null && outB != null && outC != null && outD != null) {
+                String playersStr = a + "," + b + "," + c + "," + d;
+
+                // ✅ 모드명을 "2v2" 로 보냄
+                String matchMsg = "MATCH 2v2 " + playersStr;
+
+                outA.println(matchMsg);
+                outB.println(matchMsg);
+                outC.println(matchMsg);
+                outD.println(matchMsg);
+
+                System.out.println("[SERVER] MATCHED 2v2: " + matchMsg);
+
+                // ✅ 방 생성 (턴 순서는 a → b → c → d 순으로 진행)
+                String[] players = { a, b, c, d };
+                Room room = new Room("2v2", players, 0);
+
+                for (String p : players) {
+                    roomMap.put(p, room);
+                }
+
+                // 첫 턴 브로드캐스트
+                broadcastTurn(room);
             }
         }
     }

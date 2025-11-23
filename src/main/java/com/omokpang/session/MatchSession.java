@@ -13,6 +13,7 @@ public class MatchSession {
 
     /** 게임 모드 (예: "1v1", "2v2" 등) */
     private static String mode;
+    private static String requestedMode;
 
     /** 매칭된 플레이어 닉네임 목록 (예: ["채채채", "채빵"]) */
     private static String[] players;
@@ -26,6 +27,8 @@ public class MatchSession {
     /** 카드 선택 화면에서 이 유저가 고른 카드 2장 */
     private static List<Card> mySelectedCards;
 
+    private static int[] playerTeam;  // 각 플레이어가 어느 팀인지 (0 또는 1)
+
     // ===================== 기본 정보 (모드 / 플레이어 / 내 닉네임) =====================
 
     public static String getMode() {
@@ -34,6 +37,14 @@ public class MatchSession {
 
     public static void setMode(String mode) {
         MatchSession.mode = mode;
+    }
+
+    public static void setRequestedMode(String m) {
+        requestedMode = m;
+    }
+
+    public static String getRequestedMode() {
+        return requestedMode;
     }
 
     public static String[] getPlayers() {
@@ -46,6 +57,14 @@ public class MatchSession {
 
     public static String getMyNickname() {
         return myNickname;
+    }
+
+    public static void setPlayerTeam(int[] team) {
+        playerTeam = team;
+    }
+
+    public static int[] getPlayerTeam() {
+        return playerTeam;
     }
 
     /**

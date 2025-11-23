@@ -39,6 +39,11 @@ public class SharedStoneGuideController {
         closeOverlay();
     }
 
+    /** 🔥 GameBoardController 외부에서 닫을 수 있도록 public close() 제공 */
+    public void close() {
+        closeOverlay();
+    }
+
     /** 오버레이 제거 */
     private void closeOverlay() {
         rootOverlay.setVisible(false);
