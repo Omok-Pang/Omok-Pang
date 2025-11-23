@@ -85,6 +85,10 @@ public class GameBoardController {
     private String myNickname;
     private int myIndex = 0;
 
+    // 🔥 팀 정보 (0팀, 1팀)
+    private int[] playerTeam;           // 길이 = players.length, 값 = 0 또는 1
+    private String[] stonePathOfTeam = new String[3]; // 팀별 돌 이미지 [1]=팀0, [2]=팀1
+
     // 내 돌 / 상대 돌 이미지 경로 (sm_ 아이콘)
     private String myStonePath;
     private String opponentStonePath;
@@ -332,9 +336,9 @@ public class GameBoardController {
 
     /**
      * MatchSuccess / 카드 선택 화면에서 저장해둔 아바타 정보를 이용해
-     * - top / bottom 프로필 이미지
-     * - 선공/후공(mySign)
-     * - 내 돌 / 상대 돌 이미지 경로
+     * - top / bottom / left / right 프로필 이미지
+     * - 내 인덱스 / mySign
+     * - 플레이어별 돌 이미지 경로(stonePathOfPlayer)
      * 를 세팅한다.
      */
     private void initAvatarsFromSession() {
@@ -345,18 +349,20 @@ public class GameBoardController {
         this.players = players;
         this.myNickname = me;
 
+        this.playerTeam = MatchSession.getPlayerTeam();
+
         if (players == null || avatars == null || players.length < 2 || me == null) {
             System.out.println("[GameBoard] WARN: MatchSession info missing.");
             return;
         }
 
-        // 플레이어별 돌 이미지 경로 설정
+        // 1) 플레이어별 돌 이미지 경로(sm_ 아바타) 세팅
         stonePathOfPlayer = new String[players.length];
         for (int i = 0; i < players.length; i++) {
             stonePathOfPlayer[i] = toStonePath(avatars[i]);
         }
 
-        // 내 인덱스 찾기
+        // 2) 내 인덱스 찾기
         int myIdx = 0;
         for (int i = 0; i < players.length; i++) {
             if (players[i].equals(me)) {
@@ -365,9 +371,11 @@ public class GameBoardController {
             }
         }
         this.myIndex = myIdx;
+        // 🔥 보드 위 내 sign은 항상 (내 인덱스 + 1)
+        this.mySign = myIdx + 1;
 
         if (players.length == 2) {
-            // ===== 1:1 배치 (기존 로직) =====
+            // ===== 1:1 배치 =====
             int oppIndex = (myIdx == 0) ? 1 : 0;
 
             String myAvatarPath  = avatars[myIdx];
@@ -380,25 +388,34 @@ public class GameBoardController {
                     new Image(getClass().getResource(oppAvatarPath).toExternalForm())
             );
 
-            myStonePath = toStonePath(myAvatarPath);
-            opponentStonePath = toStonePath(oppAvatarPath);
+            // 돌 경로는 이미 stonePathOfPlayer에 세팅되어 있음
+            bottomStonePath = stonePathOfPlayer[myIdx];
+            topStonePath = stonePathOfPlayer[oppIndex];
 
-            bottomStonePath = myStonePath;
-            topStonePath = opponentStonePath;
+            myStonePath = bottomStonePath;
+            opponentStonePath = topStonePath;
 
-            mySign = myIdx + 1;           // 내 돌은 1 또는 2
-            opponentSign = oppIndex + 1;  // 상대 돌은 2 또는 1
+            // 팀 정보 없으면 0 vs 1로 기본 세팅 (팀전이 아니어도 무방)
+            if (playerTeam == null || playerTeam.length != 2) {
+                playerTeam = new int[2];
+                playerTeam[0] = 0;
+                playerTeam[1] = 1;
+            }
+
+            // 기존 코드 호환용 (실제 로직에서는 opponentSign을 쓰지 않게 변경했지만 남겨둠)
+            opponentSign = oppIndex + 1;
+
         } else if (players.length == 4) {
             // ===== 4인 배치 =====
-            // 내 기준으로 시계방향: 아래(나) -> 왼쪽 -> 위 -> 오른쪽
+            // 내 기준: 아래(나) -> 왼쪽 -> 위 -> 오른쪽 (시계 방향)
             int leftIdx  = (myIdx + 1) % 4;
             int topIdx   = (myIdx + 2) % 4;
             int rightIdx = (myIdx + 3) % 4;
 
-            String myAvatarPath   = avatars[myIdx];
-            String leftAvatarPath = avatars[leftIdx];
-            String topAvatarPath  = avatars[topIdx];
-            String rightAvatarPath= avatars[rightIdx];
+            String myAvatarPath    = avatars[myIdx];
+            String leftAvatarPath  = avatars[leftIdx];
+            String topAvatarPath   = avatars[topIdx];
+            String rightAvatarPath = avatars[rightIdx];
 
             bottomPlayerImage.setImage(
                     new Image(getClass().getResource(myAvatarPath).toExternalForm())
@@ -413,12 +430,18 @@ public class GameBoardController {
                     new Image(getClass().getResource(rightAvatarPath).toExternalForm())
             );
 
-            // 돌은 일단 "나 vs 나 아닌 모두" 두 종류만 쓰고 있으니 그대로 유지
-            myStonePath = toStonePath(myAvatarPath);
-            opponentStonePath = "/images/user/sm_user2.png"; // 필요하면 더 고도화
+            // 팀 정보 없으면 0,2 vs 1,3 으로 강제 (A팀 / B팀)
+            if (playerTeam == null || playerTeam.length != 4) {
+                playerTeam = new int[4];
+                playerTeam[0] = 0; // A팀
+                playerTeam[1] = 1; // B팀
+                playerTeam[2] = 0; // A팀
+                playerTeam[3] = 1; // B팀
+            }
 
-            bottomStonePath = myStonePath;
-            topStonePath = opponentStonePath;
+            // 4인전에서도 돌 이미지는 "플레이어별 sm_ 아바타" 그대로 사용한다.
+            bottomStonePath = stonePathOfPlayer[myIdx];
+            topStonePath = stonePathOfPlayer[topIdx];
         }
     }
 
@@ -685,14 +708,24 @@ public class GameBoardController {
 
         boardRoot.getChildren().add(stone);
 
-        // 현재 턴의 플레이어가 (r,c)에 둔 것
         board[r][c] = sign;
         stoneViews[r][c] = stone;
 
-        // ✅ 여기서 5목 승리 여부 검사
-        if (checkWin(r, c, sign)) {
-            onGameOver(sign);   // sign이 이긴 사람의 sign(1 또는 -1)
-            return;             // 턴/타이머 처리는 onGameOver에서
+        // 팀전이면 "팀 기준" 승리, 아니면 기존 개인 기준
+        if (isTeamMode2v2()) {
+            int teamId = playerTeam[currentIdx];   // 현재 돌을 둔 플레이어의 팀
+
+            if (checkTeamWin(r, c, teamId)) {
+                // 팀이 이겼지만, 기존 onGameOver는 "플레이어 sign"을 받으니까
+                // 우선 이 돌을 둔 플레이어를 대표로 넘겨줌
+                onGameOver(sign);
+                return;
+            }
+        } else {
+            if (checkWin(r, c, sign)) {
+                onGameOver(sign);
+                return;
+            }
         }
 
         // 한 턴에 둘 수 있는 수 감소 (기본 1, DoubleMove 시 2)
@@ -737,10 +770,18 @@ public class GameBoardController {
         stopTimer();
         boardRoot.setOnMouseClicked(null);
 
-        // ✅ 내 인덱스 + 1 == winnerSign 이면 내가 이긴 것
-        boolean iWon = (winnerSign == (myIndex + 1));
+        boolean iWon;
 
-        // 결과 화면(모달 오버레이) 띄우기
+        if (isTeamMode2v2()) {
+            int winnerIdx = winnerSign - 1;
+            int winnerTeam = playerTeam[winnerIdx];
+            int myTeam = playerTeam[myIndex];
+
+            iWon = (winnerTeam == myTeam);   // 같은 팀이면 둘 다 승리 처리
+        } else {
+            iWon = (winnerSign == (myIndex + 1));
+        }
+
         openResultScene(winnerSign, iWon);
     }
 
@@ -813,13 +854,15 @@ public class GameBoardController {
                             rank = 2;
                             score = "40";
                         }
-                    } else if (n == 4) {
-                        // ✅ 4인: 1등 80, 나머지 3명은 모두 2등(40점)
-                        if (i == winnerIdx) {
+                    } else if (n == 4 && isTeamMode2v2()) {
+                        int winnerTeam = playerTeam[winnerIdx];
+                        int myTeam = playerTeam[i];
+
+                        if (playerTeam[i] == winnerTeam) {
                             rank = 1;
                             score = "80";
                         } else {
-                            rank = 2;      // 공동 2등
+                            rank = 2;
                             score = "40";
                         }
                     } else {
@@ -1284,17 +1327,39 @@ public class GameBoardController {
 
     /**
      * SharedStone 선택 모드에서 보드를 클릭했을 때 동작.
-     * - 상대 돌(opponentSign)만 선택 가능.
+     * - 상대 팀 돌만 선택 가능.
      */
     private void handleSharedStoneTargetClick(int r, int c) {
         if (!isInside(r, c)) return;
 
-        int mySignNow = myIndex + 1; // board[][]에 들어가는 내 sign (1~N)
+        int cellSign = board[r][c];
 
-        // ✅ 공용돌 대상: 빈 칸 X, 내 돌 X → 나머지는 전부 상대 돌로 간주
-        if (board[r][c] == 0 || board[r][c] == mySignNow) {
-            System.out.println("[GameBoard] SharedStone: 상대 돌이 아닌 곳을 클릭했습니다.");
+        if (cellSign == 0) {
+            System.out.println("[GameBoard] SharedStone: 빈 칸을 클릭했습니다.");
             return;
+        }
+
+        // 팀 정보가 있으면: 같은 팀 돌은 선택 불가
+        if (playerTeam != null && players != null
+                && playerTeam.length == players.length) {
+
+            int targetIdx = cellSign - 1;
+            if (targetIdx < 0 || targetIdx >= playerTeam.length) {
+                System.out.println("[GameBoard] SharedStone: 잘못된 sign 값 " + cellSign);
+                return;
+            }
+
+            if (playerTeam[targetIdx] == playerTeam[myIndex]) {
+                System.out.println("[GameBoard] SharedStone: 같은 팀 돌은 선택할 수 없습니다.");
+                return;
+            }
+        } else {
+            // 팀 정보가 없으면: 내 돌만 아니면 상대 돌 취급
+            int mySignNow = myIndex + 1;
+            if (cellSign == mySignNow) {
+                System.out.println("[GameBoard] SharedStone: 내 돌을 선택했습니다.");
+                return;
+            }
         }
 
         if (sharedStoneGuideController != null) {
@@ -1438,6 +1503,55 @@ public class GameBoardController {
         return false;
     }
 
+    /** (r,c)가 teamId(0 또는 1)의 돌(또는 공용돌)인지 여부 */
+    private boolean isStoneForTeam(int r, int c, int teamId) {
+        if (!isInside(r, c)) return false;
+
+        // 공용돌이면 어느 팀에게나 자신의 돌로 인정
+        if (sharedStones[r][c]) return true;
+
+        int sign = board[r][c];
+        if (sign == 0) return false;
+
+        // sign -> 플레이어 인덱스(0~3) -> 팀 번호
+        int idx = sign - 1;
+        if (playerTeam == null || idx < 0 || idx >= playerTeam.length) return false;
+
+        return playerTeam[idx] == teamId;
+    }
+
+    /** (dr,dc) 방향으로 같은 팀 돌이 몇 개 연속인지 센다 (자기 자신 포함) */
+    private int countDirectionForTeam(int r, int c, int teamId, int dr, int dc) {
+        int cnt = 0;
+        int nr = r;
+        int nc = c;
+
+        while (isStoneForTeam(nr, nc, teamId)) {
+            cnt++;
+            nr += dr;
+            nc += dc;
+        }
+        return cnt;
+    }
+
+    /** 마지막에 (r,c)에 둔 teamId(0 또는 1)가 5목인지 검사 */
+    private boolean checkTeamWin(int r, int c, int teamId) {
+        // 가로
+        if (countDirectionForTeam(r, c, teamId, 0, 1)
+                + countDirectionForTeam(r, c, teamId, 0, -1) - 1 >= 5) return true;
+        // 세로
+        if (countDirectionForTeam(r, c, teamId, 1, 0)
+                + countDirectionForTeam(r, c, teamId, -1, 0) - 1 >= 5) return true;
+        // ↘ 대각선
+        if (countDirectionForTeam(r, c, teamId, 1, 1)
+                + countDirectionForTeam(r, c, teamId, -1, -1) - 1 >= 5) return true;
+        // ↗ 대각선
+        if (countDirectionForTeam(r, c, teamId, 1, -1)
+                + countDirectionForTeam(r, c, teamId, -1, 1) - 1 >= 5) return true;
+
+        return false;
+    }
+
     /**
      * 내가 SharedStone 타겟 좌표(r,c)를 최종 선택했을 때 호출.
      * - SharedStone 효과를 내 보드에 적용
@@ -1475,7 +1589,6 @@ public class GameBoardController {
         }
 
         try {
-            // ⚠️ 공용돌 이미지 경로는 실제 리소스에 맞게 변경해줘
             Image sharedImg = new Image(
                     getClass().getResource("/images/cards/shared_stone.png").toExternalForm()
             );
@@ -1484,13 +1597,33 @@ public class GameBoardController {
 
             System.out.println("[GameBoard] SharedStone 적용 완료 at (" + r + ", " + c + ")");
 
-            // 🔥 공용돌 포함 즉시 승리 여부 체크 (양쪽 모두)
-            if (checkWin(r, c, mySign)) {
-                onGameOver(mySign);
-                return;
-            }
-            if (checkWin(r, c, opponentSign)) {
-                onGameOver(opponentSign);
+            // 🔥 공용돌 포함 즉시 승리 여부 체크
+            if (players != null) {
+                if (isTeamMode2v2()) {
+                    // 팀 기준으로 0팀 / 1팀 검사
+                    for (int teamId = 0; teamId <= 1; teamId++) {
+                        if (checkTeamWin(r, c, teamId)) {
+                            // 대표 플레이어 하나 골라서 승자로 넘기기
+                            int winnerIdx = 0;
+                            for (int i = 0; i < playerTeam.length; i++) {
+                                if (playerTeam[i] == teamId) {
+                                    winnerIdx = i;
+                                    break;
+                                }
+                            }
+                            onGameOver(winnerIdx + 1);
+                            return;
+                        }
+                    }
+                } else {
+                    // 기존 개인 기준
+                    for (int sign = 1; sign <= players.length; sign++) {
+                        if (checkWin(r, c, sign)) {
+                            onGameOver(sign);
+                            return;
+                        }
+                    }
+                }
             }
 
         } catch (Exception e) {
@@ -1642,6 +1775,14 @@ public class GameBoardController {
         // 턴 전환은 서버에서 TURN 메시지를 통해 관리
     }
 
+    /** 2:2 팀전인지 여부 */
+    private boolean isTeamMode2v2() {
+        return players != null
+                && players.length == 4
+                && playerTeam != null
+                && playerTeam.length == players.length;
+    }
+
     // ================== Swap 카드 로직 ==================
 
     /** Swap 카드 사용 시작 (내가 카드 선택했을 때 호출) */
@@ -1678,7 +1819,7 @@ public class GameBoardController {
         }
     }
 
-    /** Swap 선택 모드에서 보드를 클릭했을 때: 1번 클릭은 내 돌, 2번 클릭은 상대 돌 */
+    /** Swap 선택 모드에서 보드를 클릭했을 때: 1번 클릭은 내 돌, 2번 클릭은 상대 팀 돌 */
     private void handleSwapSelectClick(int r, int c) {
         if (!isInside(r, c)) return;
 
@@ -1696,10 +1837,34 @@ public class GameBoardController {
             return;
         }
 
-        // 2단계: 상대 돌 선택
-        if (board[r][c] != opponentSign) {
-            System.out.println("[GameBoard] Swap: 상대 돌이 아닌 곳을 클릭했습니다.");
+        // 2단계: 상대 팀 돌 선택
+        int cellSign = board[r][c];
+
+        if (cellSign == 0) {
+            System.out.println("[GameBoard] Swap: 비어있는 칸을 클릭했습니다.");
             return;
+        }
+
+        // 팀 정보가 있는 경우: 같은 팀 돌은 교환 불가
+        if (playerTeam != null && players != null
+                && playerTeam.length == players.length) {
+
+            int targetIdx = cellSign - 1;
+            if (targetIdx < 0 || targetIdx >= playerTeam.length) {
+                System.out.println("[GameBoard] Swap: 잘못된 sign 값 " + cellSign);
+                return;
+            }
+
+            if (playerTeam[targetIdx] == playerTeam[myIndex]) {
+                System.out.println("[GameBoard] Swap: 같은 팀 돌은 교환할 수 없습니다.");
+                return;
+            }
+        } else {
+            // 팀 정보가 없으면: 내 돌만 아니면 상대 돌 취급
+            if (cellSign == mySign) {
+                System.out.println("[GameBoard] Swap: 내 돌을 다시 선택했습니다.");
+                return;
+            }
         }
 
         int myR = swapMyPos[0];
@@ -1761,6 +1926,7 @@ public class GameBoardController {
         if (iv == null) return;
 
         try {
+            // 공용돌이면 무조건 공용돌 이미지
             if (sharedStones[r][c]) {
                 Image sharedImg = new Image(
                         getClass().getResource("/images/cards/shared_stone.png").toExternalForm()
@@ -1769,18 +1935,26 @@ public class GameBoardController {
                 return;
             }
 
-            int sign = board[r][c];
-            String path = null;
-            if (sign == mySign) {
-                path = myStonePath;
-            } else if (sign == opponentSign) {
-                path = opponentStonePath;
+            int sign = board[r][c]; // 1 ~ players.length
+            if (sign <= 0 || players == null || stonePathOfPlayer == null) {
+                return;
             }
 
-            if (path == null) return;
+            int idx = sign - 1;
+            if (idx < 0 || idx >= stonePathOfPlayer.length) {
+                System.out.println("[GameBoard] refreshStoneImage: 잘못된 sign=" + sign);
+                return;
+            }
+
+            String path = stonePathOfPlayer[idx];
+            if (path == null || path.isBlank()) {
+                System.out.println("[GameBoard] refreshStoneImage: 이미지 경로 없음, sign=" + sign);
+                return;
+            }
 
             Image img = new Image(getClass().getResource(path).toExternalForm());
             iv.setImage(img);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1963,10 +2137,37 @@ public class GameBoardController {
     private void handleRemoveTargetClick(int r, int c) {
         if (!isInside(r, c)) return;
 
-        // 상대 돌만 제거 가능 (공용돌도 제거 가능)
-        if (board[r][c] != opponentSign && !sharedStones[r][c]) {
-            System.out.println("[GameBoard] Remove: 상대 돌이 아닌 곳을 클릭했습니다.");
+        int cellSign = board[r][c];
+
+        // 빈 칸 + 공용 아님 → 선택 불가
+        if (cellSign == 0 && !sharedStones[r][c]) {
+            System.out.println("[GameBoard] Remove: 빈 칸을 클릭했습니다.");
             return;
+        }
+
+        // 공용돌(sharedStones)은 항상 제거 가능
+        if (!sharedStones[r][c]) {
+            // 팀 정보가 있는 경우: 같은 팀(나/팀원) 돌은 제거 불가
+            if (playerTeam != null && players != null
+                    && playerTeam.length == players.length) {
+
+                int targetIdx = cellSign - 1;
+                if (targetIdx < 0 || targetIdx >= playerTeam.length) {
+                    System.out.println("[GameBoard] Remove: 잘못된 sign 값 " + cellSign);
+                    return;
+                }
+
+                if (playerTeam[targetIdx] == playerTeam[myIndex]) {
+                    System.out.println("[GameBoard] Remove: 같은 팀 돌은 제거할 수 없습니다.");
+                    return;
+                }
+            } else {
+                // 팀 정보가 없으면: 내 돌만 아니면 제거 가능
+                if (cellSign == mySign) {
+                    System.out.println("[GameBoard] Remove: 자신의 돌은 제거할 수 없습니다.");
+                    return;
+                }
+            }
         }
 
         if (removeGuideController != null) {

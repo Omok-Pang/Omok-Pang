@@ -55,13 +55,6 @@ public class MainController {
             labelPoint.setText(String.valueOf(user.getPoints())); // 포인트
             labelWin.setText(String.valueOf(user.getWins()));     // 승리 수
 
-            // 프로필 이미지를 User에 따로 저장하고 있다면 여기서 세팅
-            // 예: user.getProfileImagePath()
-            // String profilePath = user.getProfileImagePath();
-            // if (profilePath != null && !profilePath.isBlank()) {
-            //     Image profileImg = loadImg(profilePath);
-            //     if (profileImg != null) imgProfile.setImage(profileImg);
-            // }
         }
     }
 
@@ -79,10 +72,12 @@ public class MainController {
     @FXML
     private void handleSelectTeam() {
         isTeamMode = true;
+        playerCount = 4;
+
         resetModeImages();
-        resetSizeImages();
-        playerCount = 0;
         imgTeam.setImage(loadImg(TEAM_COLOR));
+
+        resetSizeImages();
     }
 
     private void resetModeImages() {
@@ -137,31 +132,32 @@ public class MainController {
     @FXML
     private void handleStartGame() {
 
-        if (isTeamMode) {
-            // 팀전(2:2)은 나중에 구현할 예정이니 일단 TODO로 두거나,
-            // 서버/클라 쪽이 아직 없다고 경고만 띄워도 됨.
-            System.out.println("아직 2:2 팀전은 미구현입니다 ㅠㅠ");
-            return;
-        }
-
-        if (playerCount == 0) {
-            System.out.println("[WARN] 개인전 인원을 선택하지 않았습니다.");
-            return;
-        }
-
         String mode;
-        if (playerCount == 2) {
-            mode = "1v1";
-        } else {           // playerCount == 4
-            mode = "1v1v1v1";
+        if (isTeamMode) {
+            // ✅ 팀전: 2:2(4인) 고정
+            mode = "2v2";
+            playerCount = 4;
+
+        } else {
+            // ✅ 개인전 모드
+            if (playerCount == 0) {
+                System.out.println("[WARN] 개인전 인원을 선택하지 않았습니다.");
+                return;
+            }
+
+            if (playerCount == 2) {
+                mode = "1v1";
+            } else {   // 4인 개인전
+                mode = "1v1v1v1";
+            }
         }
 
         // 내가 원하는 모드를 MatchSession에 먼저 저장
         MatchSession.setRequestedMode(mode);
 
-        System.out.println("게임 시작: mode=" + mode + ", count=" + playerCount);
+        System.out.println("게임 시작: mode=" + mode + ", isTeamMode=" + isTeamMode + ", count=" + playerCount);
 
-        // 매칭 화면으로 이동 (1v1 / 4FFA 둘 다 같은 MatchingView 사용)
+        // 매칭 화면으로 이동 (1v1 / 4FFA / 2v2 모두 같은 MatchingView 사용)
         SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 

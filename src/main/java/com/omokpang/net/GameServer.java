@@ -26,6 +26,9 @@ public class GameServer {
     // 4인 FFA 큐
     private static final Queue<String> queueFfa4 = new ArrayDeque<>();
 
+    // 2:2 팀전 큐
+    private static final Queue<String> queue2v2 = new ArrayDeque<>();
+
     // "어떤 닉네임이 어떤 방에 속해 있는지"
     private static final Map<String, Room> roomMap = new ConcurrentHashMap<>();
 
@@ -427,13 +430,15 @@ public class GameServer {
                 if (line.startsWith("QUEUE ")) {
                     String[] parts = line.split("\\s+");
                     if (parts.length >= 3) {
-                        String mode = parts[1];   // "1v1" or "1v1v1v1"
+                        String mode = parts[1];   // "1v1" / "1v1v1v1" / "2v2"
                         String nick = parts[2];
 
                         if ("1v1".equals(mode)) {
                             enqueue1v1(nick);
                         } else if ("1v1v1v1".equals(mode)) {
                             enqueueFfa4(nick);
+                        } else if ("2v2".equals(mode)) {     // ✅ 추가
+                            enqueue2v2(nick);
                         }
                     }
                     continue;
@@ -698,6 +703,54 @@ public class GameServer {
 
         System.out.println("[SERVER] TURN broadcast(room=" + room.mode +
                 "): " + curNick);
+    }
+
+    // 2:2 팀전 대기열
+    private static synchronized void enqueue2v2(String nick) {
+        // 이미 큐에 있으면 중복 방지
+        if (queue2v2.contains(nick)) return;
+
+        queue2v2.add(nick);
+        System.out.println("[SERVER] QUEUE 2v2: " + nick +
+                " (현재 대기: " + queue2v2.size() + ")");
+
+        // 4명 모이면 매칭
+        if (queue2v2.size() >= 4) {
+            String a = queue2v2.poll();
+            String b = queue2v2.poll();
+            String c = queue2v2.poll();
+            String d = queue2v2.poll();
+
+            PrintWriter outA = clientMap.get(a);
+            PrintWriter outB = clientMap.get(b);
+            PrintWriter outC = clientMap.get(c);
+            PrintWriter outD = clientMap.get(d);
+
+            if (outA != null && outB != null && outC != null && outD != null) {
+                String playersStr = a + "," + b + "," + c + "," + d;
+
+                // ✅ 모드명을 "2v2" 로 보냄
+                String matchMsg = "MATCH 2v2 " + playersStr;
+
+                outA.println(matchMsg);
+                outB.println(matchMsg);
+                outC.println(matchMsg);
+                outD.println(matchMsg);
+
+                System.out.println("[SERVER] MATCHED 2v2: " + matchMsg);
+
+                // ✅ 방 생성 (턴 순서는 a → b → c → d 순으로 진행)
+                String[] players = { a, b, c, d };
+                Room room = new Room("2v2", players, 0);
+
+                for (String p : players) {
+                    roomMap.put(p, room);
+                }
+
+                // 첫 턴 브로드캐스트
+                broadcastTurn(room);
+            }
+        }
     }
 
 }

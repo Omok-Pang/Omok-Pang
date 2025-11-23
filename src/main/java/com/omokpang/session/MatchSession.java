@@ -27,6 +27,8 @@ public class MatchSession {
     /** 카드 선택 화면에서 이 유저가 고른 카드 2장 */
     private static List<Card> mySelectedCards;
 
+    private static int[] playerTeam;  // 각 플레이어가 어느 팀인지 (0 또는 1)
+
     // ===================== 기본 정보 (모드 / 플레이어 / 내 닉네임) =====================
 
     public static String getMode() {
@@ -55,6 +57,14 @@ public class MatchSession {
 
     public static String getMyNickname() {
         return myNickname;
+    }
+
+    public static void setPlayerTeam(int[] team) {
+        playerTeam = team;
+    }
+
+    public static int[] getPlayerTeam() {
+        return playerTeam;
     }
 
     /**
