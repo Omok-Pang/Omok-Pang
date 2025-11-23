@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<StackPane fx:id="rootOverlay"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.omokpang.controller.effect.SharedStoneGuideController"
+           style="-fx-background-color: transparent;"
+           pickOnBounds="false">
+
+    <BorderPane prefWidth="Infinity" prefHeight="Infinity">
+
+        <!-- 화면 아래쪽에 고정되는 안내 바 -->
+        <bottom>
+            <StackPane prefHeight="130"
+                       style="-fx-background-color: rgba(0,0,0,0.75);">
+                <Label fx:id="guideLabel"
+                       wrapText="true"
+                       textAlignment="CENTER"
+                       style="-fx-text-fill: white;
+                              -fx-font-size: 18px;
+                              -fx-font-weight: bold;
+                              -fx-alignment: center;" />
+            </StackPane>
+        </bottom>
+
+    </BorderPane>
+</StackPane>

@@ -12,8 +12,8 @@ public enum CardType {
     TIME_LOCK("/images/gamecard/me_TimeLock.png", 15),
     DEFENSE("/images/gamecard/me_Defense.png", 20),
     SHIELD("/images/gamecard/me_Shield.png", 15),
-    SHARED_STONE("/images/gamecard/me_SharedStone.png", 12),
-    BOMB("/images/gamecard/me_Bomb.png", 100);
+    SHARED_STONE("/images/gamecard/me_SharedStone.png", 15),
+    BOMB("/images/gamecard/me_Bomb.png", 12);
 
     private final String imagePath;
     private final int weight;
