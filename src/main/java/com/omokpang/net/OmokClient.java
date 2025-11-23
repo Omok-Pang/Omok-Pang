@@ -8,10 +8,10 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.function.Consumer;
 
-/**
- * 역할: OmokPang 클라이언트 네트워크 모듈 (싱글톤).
- *  - JavaFX 앱 내에서 한 번만 connect() 호출해서 계속 재사용.
- *  - 서버와 send/receive 담당.
+/** OmokClient
+ * 역할: JavaFX 클라이언트에서 서버와 통신하는 싱글톤 네트워크 모듈.
+ * 핵심기능: 서버 연결(connect) / 메시지 전송(send) / 수신 메시지 핸들러 전달.
+ * UI 연동: 수신 스레드에서 Platform.runLater 로 컨트롤러에 콜백 전달.
  */
 public class OmokClient {
 
@@ -51,14 +51,14 @@ public class OmokClient {
 
         System.out.println("[CLIENT] Connected to " + host + ":" + port);
 
-        // 🔁 서버로부터 계속 읽는 스레드 시작
+        // 서버로부터 계속 읽는 스레드 시작
         Thread listener = new Thread(() -> {
             try {
                 String line;
                 while (connected && (line = in.readLine()) != null) {
                     System.out.println("[CLIENT] recv: " + line);
                     if (messageHandler != null) {
-                        String msg = line;  // ✅ 람다에서 쓸 별도 final 변수
+                        String msg = line;
                         Platform.runLater(() -> messageHandler.accept(msg));
                     }
                 }
@@ -71,7 +71,7 @@ public class OmokClient {
         listener.start();
     }
 
-    /** 간단 문자열 전송 */
+    // 간단 문자열 전송
     public void send(String msg) {
         if (!connected) return;
         out.println(msg);

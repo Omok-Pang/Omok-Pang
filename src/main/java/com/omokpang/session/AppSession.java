@@ -4,9 +4,11 @@ import com.omokpang.domain.user.User;
 
 /**
  * AppSession
- * 역할: 간단한 로그인 세션 상태 관리
- *  - loggedIn : 현재 로그인 여부
- *  - currentUser : 현재 로그인한 유저 정보
+ * 역할: 로그인 상태를 전역적으로 보관하는 세션 스토리지.
+ * 핵심기능:
+ *  - 현재 로그인 여부 저장
+ *  - 로그인한 User 객체 보관
+ *  - 로그아웃 시 세션 초기화
  */
 public class AppSession {
 

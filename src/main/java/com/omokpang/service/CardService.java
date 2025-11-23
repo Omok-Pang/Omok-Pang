@@ -1,8 +1,3 @@
-/** CardService
- * 역할: 카드 지급·리롤·보유 정책.
- * 핵심기능: 2장 랜덤 지급 / 40pt 리롤 / 사용 가능 여부 검증.
- */
-
 package com.omokpang.service;
 
 import com.omokpang.domain.card.Card;
@@ -12,11 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/** CardService
+ * 역할: 카드 뽑기·리롤 정책을 담당하는 서비스.
+ * 핵심기능: CardType 가중치 기반 랜덤 카드 생성 및 2장 지급 로직 제공.
+ */
 public class CardService {
 
     private static final Random rand = new Random();
 
-    /** 2장 뽑기 */
+    // 2장 뽑기
     public List<Card> drawTwo() {
         List<Card> list = new ArrayList<>();
         list.add(drawOne());
@@ -24,7 +23,7 @@ public class CardService {
         return list;
     }
 
-    /** 리롤 */
+    // 리롤
     public Card drawOne() {
         int total = 0;
 

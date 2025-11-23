@@ -1,12 +1,11 @@
-/** User
- * 역할: 사용자 엔티티.
- * 핵심기능: 계정정보 보유 / 승·패 시 포인트 갱신.
- */
-
 package com.omokpang.domain.user;
 
 import java.time.LocalDateTime;
 
+/** User
+ * 역할: users 테이블과 매핑되는 도메인 사용자 엔티티.
+ * 핵심기능: 닉네임·전적·포인트 등 계정 정보를 불변 객체로 보유.
+ */
 public class User {
 
     private final int id;

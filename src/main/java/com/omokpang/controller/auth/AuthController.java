@@ -1,12 +1,12 @@
-/** AuthController
- * 역할: 로그인/회원가입 화면 제어.
- * 핵심기능: 입력 유효성(닉≤10, 비번 숫자4) / 로그인·회원가입 요청 / 성공 시 화면 전환.
+/** AuthController : 로그인/회원가입 화면 컨트롤러.
+ * 역할: 탭 전환, 입력값 유효성 검사(닉≤10, 비번 숫자4), 회원가입·로그인 처리.
+ * 성공 시 AppSession에 유저 저장 후 MainView로 이동.
+ * AuthService, OmokClient와 연동됨.
  */
 
 package com.omokpang.controller.auth;
 
 import com.omokpang.domain.user.User;
-import com.omokpang.controller.main.MainController;
 import com.omokpang.service.AuthService;
 import com.omokpang.session.AppSession;
 import com.omokpang.net.OmokClient;
@@ -23,7 +23,6 @@ import java.io.IOException;
 
 public class AuthController {
 
-    // ----- FXML 바인딩 (fx:id와 1:1 일치) -----
     @FXML private TabPane authTabs;
 
     // 로그인 탭
@@ -37,7 +36,7 @@ public class AuthController {
     @FXML private PasswordField signupPwField;
     @FXML private PasswordField signupPwConfirmField;
     @FXML private Label signupMsgLabel;
-    @FXML private Button signupButton; // 버튼 활성/비활성 제어 (FXML에서 fx:id 추가 필요)
+    @FXML private Button signupButton;
 
     private final AuthService authService = new AuthService();
 
@@ -80,7 +79,7 @@ public class AuthController {
             return;
         }
 
-        // ✅ 로그인 + 유저 정보 가져오기
+        // 로그인 + 유저 정보 가져오기
         User user = authService.loginAndGetUser(id, pw);
         if (user != null) {
             AppSession.setCurrentUser(user);
@@ -130,19 +129,6 @@ public class AuthController {
         }
     }
 
-    // ---------- 탭 전환 ----------
-    @FXML
-    private void handleGotoSignup() {
-        authTabs.getSelectionModel().select(1);
-        if (signupMsgLabel != null) signupMsgLabel.setText("");
-    }
-
-    @FXML
-    private void handleGotoLogin() {
-        authTabs.getSelectionModel().select(0);
-        if (loginMsgLabel != null) loginMsgLabel.setText("");
-    }
-
     // ---------- 유틸 ----------
     private void validateSignupInputs() {
         if (signupButton == null) return;
@@ -189,7 +175,6 @@ public class AuthController {
             signupActiveImg = new Image(
                     getClass().getResourceAsStream("/images/login/loginAf_finishBt_success.png"));
         } catch (Exception e) {
-            // 이미지 못 불러와도 기능은 그대로 돌아가도록 조용히 무시
             e.printStackTrace();
         }
     }
@@ -202,7 +187,7 @@ public class AuthController {
         String id = safeText(loginIdField);
         String pw = safeText(loginPwField);
 
-        boolean ready = !id.isEmpty() && !pw.isEmpty(); // 둘 다 있으면 “준비됨”
+        boolean ready = !id.isEmpty() && !pw.isEmpty();
 
         updateLoginButtonGraphic(ready);
     }
@@ -227,7 +212,7 @@ public class AuthController {
 
     private void goToMainView(User user) {
         try {
-            // 1) 서버 연결 (이미 연결돼 있으면 내부에서 그냥 리턴)
+            // 1) 서버 연결
             OmokClient client = OmokClient.getInstance();
             if (!client.isConnected()) {
                 client.connect("127.0.0.1", 9000);
@@ -238,10 +223,6 @@ public class AuthController {
             FXMLLoader loader =
                     new FXMLLoader(getClass().getResource("/fxml/main/MainView.fxml"));
             Parent mainRoot = loader.load();
-
-            // ❌ 여기서 더 이상 controller.setUserInfo / setStats 호출 안 함
-            // MainController.initialize()에서 AppSession.currentUser 읽어와서
-            // labelUsername / labelPoint / labelWin을 세팅함
 
             Stage stage = (Stage) loginIdField.getScene().getWindow();
             stage.setScene(new Scene(mainRoot));
@@ -255,5 +236,4 @@ public class AuthController {
             loginMsgLabel.setText("서버 접속 오류 발생");
         }
     }
-
 }

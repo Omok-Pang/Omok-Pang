@@ -1,3 +1,8 @@
+/** MatchSuccessController : 매칭 성공 후 결과 표시 화면.
+ * 역할: 매칭된 플레이어 목록·아바타 표시 / 팀전(2v2) 및 개인전(1v1/4FFA) 자동 세팅.
+ * 핵심기능: MatchSession에 팀/아바타 저장 / 5초 카운트다운 후 카드 선택 화면 이동.
+ */
+
 package com.omokpang.controller.lobby;
 
 import com.omokpang.SceneRouter;
@@ -33,7 +38,7 @@ public class MatchSuccessController {
     @FXML
     public void initialize() {
 
-        // 🔥 MatchSession에서 매칭 정보 읽어오기
+        // MatchSession에서 매칭 정보 읽어오기
         String[] players = MatchSession.getPlayers();
         String me = MatchSession.getMyNickname();
         String mode = MatchSession.getMode();
@@ -48,7 +53,7 @@ public class MatchSuccessController {
         }
 
         // ================== 1. 팀 정보 / 아바타 배정 ==================
-        boolean isTeamMode = "2v2".equals(mode);   // 🔥 팀전 여부 확인
+        boolean isTeamMode = "2v2".equals(mode);   // 팀전 여부 확인
 
         String[] assignedAvatars = new String[players.length];
 
@@ -106,7 +111,7 @@ public class MatchSuccessController {
             }
         }
 
-        // 🔥 이 아바타 정보를 MatchSession에 저장 → GameBoard에서 재사용
+        // 이 아바타 정보를 MatchSession에 저장 → GameBoard에서 재사용
         MatchSession.setPlayerAvatars(assignedAvatars);
 
         // ================== 2. 화면에 플레이어+아바타 표시 ==================

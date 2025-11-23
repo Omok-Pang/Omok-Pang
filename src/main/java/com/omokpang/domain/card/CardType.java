@@ -1,7 +1,8 @@
 package com.omokpang.domain.card;
+
 /** CardType
- * 역할: 카드 종류 Enum(8종).
- * 핵심기능: 이름/설명/아이콘 키 등 메타 제공.
+ * 역할: 게임에서 사용되는 카드 종류(8종)를 정의하는 Enum.
+ * 핵심기능: 각 카드의 이미지 경로와 가중치(뽑힐 확률)를 메타데이터로 제공.
  */
 public enum CardType {
 
@@ -12,7 +13,7 @@ public enum CardType {
     DEFENSE("/images/gamecard/me_Defense.png", 20),
     SHIELD("/images/gamecard/me_Shield.png", 15),
     SHARED_STONE("/images/gamecard/me_SharedStone.png", 15),
-    BOMB("/images/gamecard/me_Bomb.png", 12);
+    BOMB("/images/gamecard/me_Bomb.png", 100);
 
     private final String imagePath;
     private final int weight;

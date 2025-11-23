@@ -1,14 +1,13 @@
-/** DataSourceProvider
- * 역할: PostgreSQL DataSource 제공(HikariCP).
- * 핵심기능: 연결 풀 설정 로드 / 싱글턴 제공.
- */
-
 package com.omokpang.repository;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/** DataSourceProvider
+ * 역할: PostgreSQL JDBC 커넥션을 제공하는 유틸리티.
+ * 핵심기능: 환경변수(OMOK_DB_URL/USER/PASSWORD) 기반으로 Connection 생성.
+ */
 public class DataSourceProvider {
 
     private static final String URL =

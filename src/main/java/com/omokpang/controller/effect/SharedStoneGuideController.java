@@ -39,7 +39,7 @@ public class SharedStoneGuideController {
         closeOverlay();
     }
 
-    /** 🔥 GameBoardController 외부에서 닫을 수 있도록 public close() 제공 */
+    /** GameBoardController 외부에서 닫을 수 있도록 public close() 제공 */
     public void close() {
         closeOverlay();
     }

@@ -4,7 +4,6 @@
   핵심기능: 손패 렌더링 / 선택 확정 콜백·전송
 -->
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
 <StackPane xmlns="http://javafx.com/javafx/21"
@@ -38,7 +37,7 @@
                     -fx-background-radius: 0 0 22 22;
                     -fx-padding: 24 40 24 40;">
 
-                <!-- 🔹 실제 카드들이 들어갈 영역: 컨트롤러에서 버튼 생성 -->
+                <!-- 실제 카드들이 들어갈 영역: 컨트롤러에서 버튼 생성 -->
                 <HBox fx:id="handCardBox"
                       alignment="CENTER"
                       spacing="24">

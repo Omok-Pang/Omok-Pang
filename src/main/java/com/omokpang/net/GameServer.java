@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 역할: OmokPang 서버 (콘솔 프로그램)
- *  - 여러 클라이언트의 접속을 받고,
- *    LOGIN / QUEUE / MATCH / 턴 관리 정도를 처리하는 매칭 서버.
+/** GameServer
+ * 역할: OmokPang 전용 매칭/턴/카드 이벤트를 처리하는 TCP 서버(콘솔 실행).
+ * 핵심기능: LOGIN·QUEUE·MATCH·TURN 관리 및 카드 관련 메시지 브로드캐스트.
+ * 모드: 1v1 / 1v1v1v1 / 2v2 방 생성 및 Room 단위 턴 순환 관리.
  */
 public class GameServer {
 
@@ -48,7 +48,7 @@ public class GameServer {
     // 매칭된 상대 매핑 (양방향)
     private static final Map<String, String> opponentMap = new ConcurrentHashMap<>();
 
-    // 🔥 현재 누구 차례인지 저장 (양쪽 닉네임 모두 같은 값 저장)
+    // 현재 누구 차례인지 저장 (양쪽 닉네임 모두 같은 값 저장)
     //  - key: 플레이어 닉네임
     //  - value: 현재 턴을 가진 플레이어의 닉네임
     private static final Map<String, String> currentTurnMap = new ConcurrentHashMap<>();
@@ -105,13 +105,13 @@ public class GameServer {
         Room room = roomMap.get(from);
         String msg = "PLACE " + r + " " + c;
 
-        // 🔥 방이 있으면 방 전체(나 제외)에게 브로드캐스트
+        // 방이 있으면 방 전체(나 제외)에게 브로드캐스트
         if (room != null) {
             broadcastToRoomExcept(room, from, msg);
             return;
         }
 
-        // 👉 방이 없으면 기존 1:1
+        // 방이 없으면 기존 1:1
         String opp = opponentMap.get(from);
         if (opp == null) return;
 
@@ -386,8 +386,6 @@ public class GameServer {
             return;
         }
 
-        // 👉 room 이 없다는 건 1:1 매치(구 방식)를 쓰고 있다는 뜻이니
-        //    기존 currentTurnMap + opponentMap 로직을 그대로 둠
         String opp = opponentMap.get(nick);
         if (opp == null) {
             System.out.println("[SERVER] TURN_END from " + nick + " but no opponent.");
@@ -437,7 +435,7 @@ public class GameServer {
                             enqueue1v1(nick);
                         } else if ("1v1v1v1".equals(mode)) {
                             enqueueFfa4(nick);
-                        } else if ("2v2".equals(mode)) {     // ✅ 추가
+                        } else if ("2v2".equals(mode)) {
                             enqueue2v2(nick);
                         }
                     }

@@ -9,8 +9,8 @@ import javafx.util.Duration;
 
 public class DoubleMoveNoticeController {
 
-    @FXML private StackPane root;        // FXML 루트
-    @FXML private Label messageLabel;    // 안내 문구 라벨
+    @FXML private StackPane root;
+    @FXML private Label messageLabel;
 
     @FXML
     public void initialize() {

@@ -1,7 +1,3 @@
-/**
- * AuthService
- * 역할: 로그인/회원가입 → PostgreSQL 연동 버전
- */
 package com.omokpang.service;
 
 import com.omokpang.domain.user.User;
@@ -9,6 +5,10 @@ import com.omokpang.repository.DataSourceProvider;
 import java.sql.*;
 import java.time.LocalDateTime;
 
+/** AuthService
+ * 역할: 로그인·회원가입 비즈니스 로직을 담당하는 인증 서비스.
+ * 핵심기능: users 테이블에 신규 유저 저장 및 로그인 시 User 도메인 반환.
+ */
 public class AuthService {
 
     // 회원가입
