@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.geometry.Insets?>
+
+<StackPane fx:id="root"
+           xmlns="http://javafx.com/javafx/17"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.effect.DefenseNoticeController"
+           style="-fx-background-color: rgba(0,0,0,0.35);">
+
+    <VBox spacing="10"
+          alignment="center"
+          style="-fx-background-color: white; -fx-background-radius: 10;"
+          maxWidth="260"
+          maxHeight="150"
+          padding="20">
+
+        <Label fx:id="titleLabel"
+               text="Defense"
+               style="-fx-font-size: 20; -fx-font-weight: bold;" />
+
+        <Label fx:id="messageLabel"
+               wrapText="true"
+               text="Defense activated"
+               style="-fx-font-size: 14; -fx-text-alignment: center;" />
+
+    </VBox>
+</StackPane>
