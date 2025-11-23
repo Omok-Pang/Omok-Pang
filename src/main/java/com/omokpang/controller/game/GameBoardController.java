@@ -604,6 +604,11 @@ public class GameBoardController {
     /** 로컬(나)에서 마우스로 보드를 클릭했을 때 처리 */
     private void handleLocalClick(int r, int c) {
 
+        // 🔥 게임이 이미 끝났으면 아무 동작도 하지 않음
+        if (gameEnded) {
+            return;
+        }
+
         // ✅ Swap 선택 모드인 경우: 내 돌 → 상대 돌 순서로 선택
         if (swapSelecting) {
             handleSwapSelectClick(r, c);
@@ -766,7 +771,7 @@ public class GameBoardController {
         if (gameEnded) return;
         gameEnded = true;
 
-        // 더 이상 타이머 / 클릭 동작 X
+        // 🔒 더 이상 타이머 / 클릭 동작 X
         stopTimer();
         boardRoot.setOnMouseClicked(null);
 
@@ -782,7 +787,12 @@ public class GameBoardController {
             iWon = (winnerSign == (myIndex + 1));
         }
 
-        openResultScene(winnerSign, iWon);
+        // 🔥 여기서 바로 모달을 띄우지 않고,
+        //    0.5초 정도 딜레이 후에 결과 모달 오픈
+        boolean finalIWon = iWon;
+        PauseTransition delay = new PauseTransition(Duration.millis(500));
+        delay.setOnFinished(e -> openResultScene(winnerSign, finalIWon));
+        delay.play();
     }
 
     /** 내 턴을 종료하고 서버에 TURN_END 전송 (서버가 턴을 넘긴다) */
