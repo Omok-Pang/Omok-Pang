@@ -51,6 +51,10 @@ public class MatchSession {
         return requestedMode;
     }
 
+    public static boolean isTeamMode2v2() { return "2v2".equals(mode); }
+
+    public static boolean isFourPlayerFFA() { return "1v1v1v1".equals(mode) || "FFA".equalsIgnoreCase(mode);}
+
     public static String[] getPlayers() {
         return players;
     }
@@ -109,9 +113,11 @@ public class MatchSession {
      */
     public static void clear() {
         mode = null;
+        requestedMode = null;
         players = null;
         myNickname = null;
         playerAvatars = null;
         mySelectedCards = null;
+        playerTeam = null;
     }
 }

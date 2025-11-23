@@ -405,13 +405,19 @@ public class GameBoardController {
                     new Image(getClass().getResource(rightAvatarPath).toExternalForm())
             );
 
-            // 팀 정보 없으면 0,2 vs 1,3 으로 강제 (A팀 / B팀)
-            if (playerTeam == null || playerTeam.length != 4) {
-                playerTeam = new int[4];
-                playerTeam[0] = 0; // A팀
-                playerTeam[1] = 1; // B팀
-                playerTeam[2] = 0; // A팀
-                playerTeam[3] = 1; // B팀
+            if (MatchSession.isTeamMode2v2()) {
+                // 2vs2 팀전: 0,2 vs 1,3
+                if (playerTeam == null || playerTeam.length != 4) {
+                    playerTeam = new int[4];
+                    playerTeam[0] = 0; // A팀
+                    playerTeam[1] = 1; // B팀
+                    playerTeam[2] = 0; // A팀
+                    playerTeam[3] = 1; // B팀
+                    MatchSession.setPlayerTeam(playerTeam);
+                }
+            } else {
+                playerTeam = null;
+                MatchSession.setPlayerTeam(null);
             }
 
             // 4인전에서도 돌 이미지는 "플레이어별 sm_ 아바타" 그대로 사용한다.
@@ -979,10 +985,7 @@ public class GameBoardController {
             iWon = (winnerSign == (myIndex + 1));
         }
 
-        boolean finalIWon = iWon;
-        PauseTransition delay = new PauseTransition(Duration.millis(50));
-        delay.setOnFinished(e -> openResultScene(winnerSign, finalIWon));
-        delay.play();
+        openResultScene(winnerSign, iWon);
     }
 
     /**
@@ -1038,8 +1041,8 @@ public class GameBoardController {
                             score = "40";
                         }
                     } else if (n == 4 && isTeamMode2v2()) {
+                        // 4인 2vs2 팀전: 같은 팀 둘 다 80점, 나머지 둘은 40점
                         int winnerTeam = playerTeam[winnerIdx];
-                        int myTeam = playerTeam[i];
 
                         if (playerTeam[i] == winnerTeam) {
                             rank = 1;
@@ -1048,6 +1051,25 @@ public class GameBoardController {
                             rank = 2;
                             score = "40";
                         }
+
+                    } else if (n == 4) {
+                        // 4인 개인전(1v1v1v1): 1등만 80점, 나머지 3명은 40점
+                        if (i == winnerIdx) {
+                            rank = 1;
+                            score = "80";
+                        } else {
+                            // 2,3,4등을 인덱스 순서대로 부여
+                            int loserRankBase = 2;
+                            int smallerLosers = 0;
+                            for (int j = 0; j < i; j++) {
+                                if (j != winnerIdx) {
+                                    smallerLosers++;
+                                }
+                            }
+                            rank = loserRankBase + smallerLosers;  // 2,3,4
+                            score = "40";
+                        }
+
                     } else {
                         // 그 외 인원수는 일단 0점 처리 (필요 시 규칙 추가)
                         rank = (i == winnerIdx) ? 1 : 2;
@@ -2414,10 +2436,7 @@ public class GameBoardController {
 
     // 2:2 팀전인지 여부
     private boolean isTeamMode2v2() {
-        return players != null
-                && players.length == 4
-                && playerTeam != null
-                && playerTeam.length == players.length;
+        return MatchSession.isTeamMode2v2();
     }
 
     private boolean isInside(int r, int c) {
