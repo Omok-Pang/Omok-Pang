@@ -13,7 +13,7 @@ public enum CardType {
     DEFENSE("/images/gamecard/me_Defense.png", 20),
     SHIELD("/images/gamecard/me_Shield.png", 15),
     SHARED_STONE("/images/gamecard/me_SharedStone.png", 15),
-    BOMB("/images/gamecard/me_Bomb.png", 100);
+    BOMB("/images/gamecard/me_Bomb.png", 12);
 
     private final String imagePath;
     private final int weight;
