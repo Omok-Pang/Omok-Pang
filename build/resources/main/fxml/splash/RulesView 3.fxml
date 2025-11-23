@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 역할/핵심기능: 규칙 화면 / 규칙 안내 + 확인 클릭 시 로그인 화면으로 이동 -->
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.effect.DropShadow?>
+
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.splash.RulesController"
+           prefWidth="800" prefHeight="800">
+
+    <!-- 배경 -->
+    <children>
+        <ImageView fitWidth="800" fitHeight="800" preserveRatio="false">
+            <image><Image url="/images/bg_lightmode.png"/></image>
+        </ImageView>
+
+        <!-- 중앙 카드 -->
+        <VBox alignment="CENTER" spacing="18" maxWidth="560" StackPane.alignment="CENTER">
+            <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+
+            <!-- 카드 배경 (반투명 노란색 + 라운드 + 그림자) -->
+            <StackPane>
+                <style>
+                    -fx-background-color: rgba(249, 223, 109, 0.90);
+                    -fx-background-radius: 20;
+                    -fx-padding: 28 28 24 28;
+                </style>
+                <effect>
+                    <DropShadow radius="24" color="rgba(0,0,0,0.25)"/>
+                </effect>
+
+                <VBox spacing="16">
+                    <!-- 제목 -->
+                    <Label text="게임규칙"
+                           style="-fx-font-size: 28; -fx-font-weight: 800; -fx-text-fill: #fff;"/>
+
+                    <ScrollPane fitToWidth="true" prefViewportHeight="220" hbarPolicy="NEVER">
+                        <content>
+                            <StackPane>
+                                <style>
+                                    -fx-background-color: rgba(255,255,255,0.95);
+                                    -fx-background-radius: 14;
+                                    -fx-padding: 16;
+                                </style>
+                                <Label wrapText="true"
+                                       maxWidth="480"
+                                       textAlignment="LEFT"
+                                       style="-fx-font-size: 15; -fx-text-fill: #1a1a1a; -fx-font-weight: 600;"
+                                       text="
+• 5개의 돌을 연속으로 놓으면 승리&#10;
+&#10;
+• 자신의 턴(20초) 동안 돌 두기 또는 카드 사용&#10;
+&#10;
+• 아무 조작이 없을 경우 턴 종료 후 자동으로 상대에게 넘어감&#10;
+&#10;
+• 게임 종료 후 포인트: 승리 +80 / 패배 +20&#10;
+&#10;
+• 사용 가능 카드: 상대돌제거, 두 번 두기, 돌 교환, 타임프레셔, 한 턴 보호, 방패, 공용돌, 폭탄
+"/>
+                            </StackPane>
+                        </content>
+                        <style>
+                            -fx-background-color: transparent;
+                            -fx-background-insets: 0;
+                            -fx-padding: 0;
+                        </style>
+                    </ScrollPane>
+
+                    <!-- 버튼 -->
+                    <Button fx:id="confirmButton" text="확인" onAction="#handleConfirm"
+                            style="
+                                -fx-background-color: linear-gradient(#222,#111);
+                                -fx-text-fill: white;
+                                -fx-font-weight: 700;
+                                -fx-padding: 8 20;
+                                -fx-background-radius: 20;
+                            "
+                            maxWidth="120" prefWidth="120" />
+                </VBox>
+            </StackPane>
+        </VBox>
+    </children>
+</StackPane>

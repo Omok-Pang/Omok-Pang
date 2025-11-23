@@ -71,6 +71,14 @@
                           maxWidth="360" maxHeight="360"
                           minWidth="360" minHeight="360"
                           style="-fx-background-color: transparent;"/>
+
+                    <!-- 🔶 3x3 하이라이트용 Pane -->
+                    <Pane fx:id="highlightPane"
+                          pickOnBounds="false"
+                          mouseTransparent="true"
+                          prefWidth="360" prefHeight="360"
+                          maxWidth="360" maxHeight="360"
+                          minWidth="360" minHeight="360" />
                 </StackPane>
 
                 <!-- 🔽 아래쪽 유저: 아바타 + 말풍선 -->

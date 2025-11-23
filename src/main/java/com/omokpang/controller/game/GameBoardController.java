@@ -32,6 +32,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import java.io.IOException;
@@ -175,6 +176,7 @@ public class GameBoardController {
 
     // 선택된 카드 아이콘 표시 영역 (오른쪽 아래)
     @FXML private HBox cardSlotBox;
+    @FXML private Pane highlightPane;
 
     // 카드 선택 화면에서 전달받은 카드 두 장
     private List<Card> receivedCards;
@@ -195,6 +197,9 @@ public class GameBoardController {
 
     // 공용돌(SharedStone) 여부 표시
     private final boolean[][] sharedStones = new boolean[N][N];
+
+    // 현재 표시 중인 하이라이트 Rectangle 들
+    private final List<Rectangle> bombHighlights = new ArrayList<>();
 
     // ================== 타이머 관련 ==================
     private static final int DEFAULT_TURN_SECONDS = 20; // 기본 턴 시간
@@ -1417,7 +1422,75 @@ public class GameBoardController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // 🔥 마우스 움직일 때 3x3 하이라이트 업데이트
+        boardRoot.setOnMouseMoved(e -> {
+            int c = (int)Math.round(e.getX() / CELL);
+            int r = (int)Math.round(e.getY() / CELL);
+            updateBombHighlight(r, c);
+        });
+
     }
+
+    private void clearBombHighlight() {
+        for (Rectangle rect : bombHighlights) {
+            highlightPane.getChildren().remove(rect);
+        }
+        bombHighlights.clear();
+    }
+
+    private void updateBombHighlight(int centerR, int centerC) {
+
+        if (highlightPane == null) return;
+
+        clearBombHighlight();
+
+        if (!bombSelecting) return;
+
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dc = -1; dc <= 1; dc++) {
+                int r = centerR + dr;
+                int c = centerC + dc;
+                if (!isInside(r, c)) continue;
+
+                Rectangle rect = new Rectangle(CELL, CELL);
+                rect.setStroke(Color.RED);
+                rect.setStrokeWidth(2);
+                rect.setFill(Color.color(1,0,0,0.15)); // 반투명 붉은색
+                rect.setLayoutX(c * CELL - CELL/2);
+                rect.setLayoutY(r * CELL - CELL/2);
+
+                bombHighlights.add(rect);
+                highlightPane.getChildren().add(rect);
+            }
+        }
+    }
+
+    /** 개별 돌 폭발 이펙트 (2초 후 자동 제거) */
+    private void showSmallExplosionAt(int r, int c) {
+        Image explosion = new Image(
+                getClass().getResource("/images/effects/bomb_small.png").toExternalForm()
+        );
+
+        ImageView iv = new ImageView(explosion);
+        iv.setFitWidth(48);   // 원하는 크기 (조절 가능)
+        iv.setFitHeight(48);
+        iv.setPreserveRatio(true);
+
+        double cx = c * CELL;
+        double cy = r * CELL;
+
+        iv.setLayoutX(cx - 24);
+        iv.setLayoutY(cy - 24);
+
+        centerStack.getChildren().add(iv);
+
+        // 2초 뒤 제거
+        PauseTransition pt = new PauseTransition(Duration.seconds(2));
+        pt.setOnFinished(e -> centerStack.getChildren().remove(iv));
+        pt.play();
+    }
+
 
     /** Bomb 선택 모드에서 보드를 클릭했을 때 */
     private void handleBombTargetClick(int r, int c) {
@@ -1462,6 +1535,8 @@ public class GameBoardController {
 
                 ImageView stone = stoneViews[r][c];
                 if (stone != null) {
+                    // 🔥 작은 폭발 효과
+                    showSmallExplosionAt(r, c);
                     boardRoot.getChildren().remove(stone);
                 }
 
