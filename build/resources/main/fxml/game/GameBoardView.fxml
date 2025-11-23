@@ -127,6 +127,35 @@
                 </ImageView>
             </StackPane>
 
+            <!-- 왼쪽 말풍선 -->
+            <StackPane fx:id="leftMessageBubble"
+                       visible="false"
+                       alignment="CENTER_LEFT"
+                       StackPane.alignment="CENTER_LEFT"
+                       translateX="120"
+                       translateY="-60">
+                <StackPane.margin>
+                    <Insets left="40"/>
+                </StackPane.margin>
+                <ImageView fitWidth="150" preserveRatio="true">
+                    <image>
+                        <Image url="/images/message/ui_message.png"/>
+                    </image>
+                </ImageView>
+                <Label fx:id="leftMessageLabel"
+                       wrapText="true"
+                       maxWidth="120"
+                       alignment="CENTER"
+                       textAlignment="CENTER"
+                       translateX="2"
+                       translateY="-3"
+                       style="
+               -fx-text-fill: white;
+               -fx-font-size: 18;
+               -fx-font-weight: 800;
+           "/>
+            </StackPane>
+
             <!-- 오른쪽 유저 (4번 플레이어 자리) -->
             <StackPane fx:id="rightPlayerContainer"
                        alignment="CENTER"
@@ -140,6 +169,35 @@
                         <Image url="/images/user/user4.png"/>
                     </image>
                 </ImageView>
+            </StackPane>
+
+            <!-- 오른쪽 말풍선 -->
+            <StackPane fx:id="rightMessageBubble"
+                       visible="false"
+                       alignment="CENTER_RIGHT"
+                       StackPane.alignment="CENTER_RIGHT"
+                       translateX="-85"
+                       translateY="-40">
+                <StackPane.margin>
+                    <Insets right="40"/>
+                </StackPane.margin>
+                <ImageView fitWidth="150" preserveRatio="true">
+                    <image>
+                        <Image url="/images/message/ui_message.png"/>
+                    </image>
+                </ImageView>
+                <Label fx:id="rightMessageLabel"
+                       wrapText="true"
+                       maxWidth="120"
+                       alignment="CENTER"
+                       textAlignment="CENTER"
+                       translateX="2"
+                       translateY="-3"
+                       style="
+               -fx-text-fill: white;
+               -fx-font-size: 18;
+               -fx-font-weight: 800;
+           "/>
             </StackPane>
 
             <!-- 왼쪽 말풍선 선택 패널 -->

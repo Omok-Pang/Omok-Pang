@@ -13,6 +13,7 @@ public class MatchSession {
 
     /** 게임 모드 (예: "1v1", "2v2" 등) */
     private static String mode;
+    private static String requestedMode;
 
     /** 매칭된 플레이어 닉네임 목록 (예: ["채채채", "채빵"]) */
     private static String[] players;
@@ -34,6 +35,14 @@ public class MatchSession {
 
     public static void setMode(String mode) {
         MatchSession.mode = mode;
+    }
+
+    public static void setRequestedMode(String m) {
+        requestedMode = m;
+    }
+
+    public static String getRequestedMode() {
+        return requestedMode;
     }
 
     public static String[] getPlayers() {

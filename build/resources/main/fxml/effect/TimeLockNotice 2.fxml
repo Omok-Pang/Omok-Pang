@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<!--
+  역할: 상대방이 Time Lock 카드를 사용해서
+       "내 돌 놓을 수 있는 시간이 3초로 줄어들었을 때"
+       잠깐 안내 문구를 보여주는 오버레이 (화면 아래 바)
+-->
+
+<StackPane fx:id="rootOverlay"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.effect.TimeLockNoticeController"
+           alignment="BOTTOM_CENTER"
+           style="-fx-background-color: transparent;">
+
+    <!-- 아래쪽 안내 바 -->
+    <VBox StackPane.alignment="BOTTOM_CENTER"
+          alignment="CENTER"
+          spacing="8"
+          prefHeight="140"
+          minHeight="140"
+          maxHeight="140"
+          style="-fx-background-color: rgba(0,0,0,0.75);
+                 -fx-background-radius: 24;
+                 -fx-padding: 20 40 20 40;">
+        <Label fx:id="noticeLabel"
+               text="상대방이 Time Lock 카드를 사용했습니다.&#10;당신의 제한시간이 3초로 줄어듭니다."
+               wrapText="true"
+               style="-fx-text-fill: white;
+                      -fx-font-size: 18px;
+                      -fx-font-weight: bold;
+                      -fx-alignment: center;" />
+    </VBox>
+
+</StackPane>

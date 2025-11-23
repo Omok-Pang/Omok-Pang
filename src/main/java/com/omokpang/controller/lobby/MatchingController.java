@@ -70,14 +70,17 @@ public class MatchingController {
             nickname = user.getNickname();
         }
 
-        // ⭐⭐ 가장 중요 ⭐⭐
-        // GameIntro / GameBoard / MatchSuccess 에서 모두 이 값을 사용하므로
-        // 여기에서 꼭 한 번 세팅해둔다.
+        // 🔥 여기서 MatchSession에 내 닉네임 저장!
         MatchSession.setMyNickname(nickname);
 
-        // 3) 1:1 매칭 대기열 등록
-        //    형식: QUEUE 1v1 닉네임
-        String queueMsg = "QUEUE 1v1 " + nickname;
+        // 3) 내가 원하는 모드 가져오기 (없으면 기본 1v1)
+        String modeToQueue = MatchSession.getRequestedMode();
+        if (modeToQueue == null || modeToQueue.isBlank()) {
+            modeToQueue = "1v1";
+        }
+
+        // "QUEUE <mode> <nickname>"
+        String queueMsg = "QUEUE " + modeToQueue + " " + nickname;
         System.out.println("[CLIENT] send: " + queueMsg);
         client.send(queueMsg);
     }
@@ -89,21 +92,21 @@ public class MatchingController {
     private void handleServerMessage(String msg) {
         System.out.println("[UI] MatchingController recv: " + msg);
 
-        // 형식: MATCH 1v1 채채채,채빵
-        if (msg.startsWith("MATCH 1v1")) {
+        if (msg.startsWith("MATCH ")) {
+            // 예) MATCH 1v1 채채채,채빵
+            //    MATCH 1v1v1v1 A,B,C,D
             String[] parts = msg.split("\\s+");
             if (parts.length >= 3) {
-                String mode = parts[1];          // "1v1"
-                String playersPart = parts[2];   // "채채채,채빵"
+                String mode = parts[1];        // "1v1" 또는 "1v1v1v1"
+                String playersPart = parts[2]; // "A,B" 또는 "A,B,C,D"
 
                 String[] players = playersPart.split(",");
 
-                // MatchSession에 저장 (다음 화면들에서 사용)
                 MatchSession.setMode(mode);
                 MatchSession.setPlayers(players);
             }
 
-            // 매칭 성공 화면으로 이동
+            // 모드는 일단 상관없이 같은 매칭 성공 화면 재사용해도 됨
             SceneRouter.go("/fxml/lobby/MatchSuccessView.fxml");
         }
     }

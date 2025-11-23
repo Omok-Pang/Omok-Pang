@@ -7,6 +7,7 @@ package com.omokpang.controller.main;
 import com.omokpang.SceneRouter;
 import com.omokpang.domain.user.User;
 import com.omokpang.session.AppSession;
+import com.omokpang.session.MatchSession;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -137,9 +138,9 @@ public class MainController {
     private void handleStartGame() {
 
         if (isTeamMode) {
-            playerCount = 4; // 2:2
-            System.out.println("게임 시작: mode=team, count=" + playerCount);
-            SceneRouter.go("/fxml/game/GameIntroView.fxml");
+            // 팀전(2:2)은 나중에 구현할 예정이니 일단 TODO로 두거나,
+            // 서버/클라 쪽이 아직 없다고 경고만 띄워도 됨.
+            System.out.println("아직 2:2 팀전은 미구현입니다 ㅠㅠ");
             return;
         }
 
@@ -148,9 +149,19 @@ public class MainController {
             return;
         }
 
-        String mode = (playerCount == 2) ? "1v1" : "1v1v1v1";
+        String mode;
+        if (playerCount == 2) {
+            mode = "1v1";
+        } else {           // playerCount == 4
+            mode = "1v1v1v1";
+        }
+
+        // 내가 원하는 모드를 MatchSession에 먼저 저장
+        MatchSession.setRequestedMode(mode);
+
         System.out.println("게임 시작: mode=" + mode + ", count=" + playerCount);
 
+        // 매칭 화면으로 이동 (1v1 / 4FFA 둘 다 같은 MatchingView 사용)
         SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 

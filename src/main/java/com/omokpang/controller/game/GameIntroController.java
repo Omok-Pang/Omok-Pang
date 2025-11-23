@@ -47,11 +47,32 @@ public class GameIntroController {
         if (players != null && players.length > 0 && me != null) {
             // 약속: players[0] → 선공 유저
             iAmFirst = players[0].equals(me);
-        }
 
-        firstPlayerLabel.setText(
-                iAmFirst ? "당신이 선공입니다!" : "당신이 후공입니다!"
-        );
+            if (players.length == 2) {
+                // 1:1 모드: 기존처럼 선/후공 문구
+                firstPlayerLabel.setText(
+                        iAmFirst ? "당신이 선공입니다!" : "당신이 후공입니다!"
+                );
+            } else if (players.length == 4) {
+                // 4인 모드: 내 인덱스를 찾아서 N번 플레이어 문구
+                int myIndex = 0;
+                for (int i = 0; i < players.length; i++) {
+                    if (players[i].equals(me)) {
+                        myIndex = i;
+                        break;
+                    }
+                }
+                int playerNumber = myIndex + 1; // 1~4
+                firstPlayerLabel.setText("당신은 " + playerNumber + "번 플레이어입니다!");
+            } else {
+                // 그 외 인원수는 일단 기본 문구
+                firstPlayerLabel.setText(
+                        iAmFirst ? "당신이 선공입니다!" : "당신이 후공입니다!"
+                );
+            }
+        } else {
+            firstPlayerLabel.setText("플레이어 정보를 불러올 수 없습니다.");
+        }
 
         startCountdown();
     }
@@ -93,85 +114,77 @@ public class GameIntroController {
             Parent root = loader.load();
             boardController = loader.getController();
 
-            // 1:1 기준 셋업
-            boardController.configureForOneVsOne(true);
+            // 🔥 1:1 / 4인 모드 구분
+            String[] players = MatchSession.getPlayers();
+            boolean isFourPlayers = (players != null && players.length == 4);
+
+            if (isFourPlayers) {
+                boardController.configureForFourPlayers();
+            } else {
+                boardController.configureForOneVsOne(true);
+            }
 
             // 네트워크 연결 가져오기
             OmokClient client = OmokClient.getInstance();
 
             // GameBoard → 서버
             boardController.bindNetwork(new GameBoardController.NetworkClient() {
-
                 @Override
                 public void sendCheer(String msg) {
                     client.send("CHEER " + msg);
                 }
-
                 @Override
                 public void sendPlace(int row, int col) {
                     client.send("PLACE " + row + " " + col);
                 }
-
                 @Override
                 public void sendSharedStoneStart() {
                     client.send("SHARED_STONE_START");
                 }
-
                 @Override
                 public void sendSharedStoneTarget(int row, int col) {
                     client.send("SHARED_STONE_TARGET " + row + " " + col);
                 }
-
                 @Override
                 public void sendBombStart() {
                     client.send("BOMB_START");
                 }
-
                 @Override
                 public void sendBombTarget(int row, int col) {
                     client.send("BOMB_TARGET " + row + " " + col);
                 }
-
                 @Override
                 public void sendTimeLockStart() {
                     client.send("TIMELOCK_START");
                 }
-
                 @Override
                 public void sendSwapStart() {
                     client.send("SWAP_START");
                 }
-
                 @Override
                 public void sendSwapTarget(int myR, int myC, int oppR, int oppC) {
                     client.send("SWAP_TARGET " + myR + " " + myC + " " + oppR + " " + oppC);
                 }
-
                 @Override
                 public void sendDoubleMoveStart() {
                     client.send("DOUBLE_MOVE_START");
                 }
-
                 @Override
                 public void sendRemoveStart() {
                     client.send("REMOVE_START");
                 }
-
                 @Override
                 public void sendRemoveTarget(int row, int col) {
                     client.send("REMOVE_TARGET " + row + " " + col);
                 }
-
                 @Override
                 public void sendShieldBlockForRemove() {
                     client.send("SHIELD_BLOCK_REMOVE");
                 }
-
                 @Override
                 public void sendShieldBlockForSwap() {
                     client.send("SHIELD_BLOCK_SWAP");
                 }
-
                 @Override
                 public void sendTurnEnd() {
                     client.send("TURN_END");
@@ -201,9 +214,14 @@ public class GameIntroController {
 
         // 말풍선
         if (line.startsWith("CHEER ")) {
-            boardController.onCheerReceivedFromOpponent(
-                    line.substring("CHEER ".length())
-            );
+            String payload = line.substring("CHEER ".length());
+            String[] p = payload.split("\\s+", 2);
+
+            if (p.length >= 1) {
+                String fromNick = p[0];
+                String text = (p.length == 2) ? p[1] : "";
+                boardController.onCheerReceived(fromNick, text);
+            }
             return;
         }
 
