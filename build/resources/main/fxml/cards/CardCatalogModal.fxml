@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  역할: 카드 종류 안내 모달
+  핵심기능: 8종 카드 메타 표시 / 닫기
+-->
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.omokpang.controller.cards.CardCatalogController"
+           prefWidth="800" prefHeight="800">
+
+    <!-- ⭐ 배경: 화면 전체 채움 -->
+    <ImageView fitWidth="800" fitHeight="800" preserveRatio="false">
+        <image><Image url="/images/bg_darkmode.png"/></image>
+    </ImageView>
+
+    <!-- ⭐ 중앙 레이아웃 -->
+    <VBox alignment="TOP_CENTER" spacing="32"
+          maxWidth="720" maxHeight="720"
+          StackPane.alignment="CENTER">
+
+        <padding>
+            <Insets top="40" right="40" bottom="40" left="40"/>
+        </padding>
+
+        <!-- 제목 -->
+        <Label text="카드종류"
+               style="-fx-text-fill:white; -fx-font-size:36; -fx-font-weight:900;" />
+
+        <!-- 카드 그리드 -->
+        <GridPane hgap="30" vgap="30" alignment="CENTER">
+
+            <ImageView GridPane.rowIndex="0" GridPane.columnIndex="0" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_Remove.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="0" GridPane.columnIndex="1" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_DoubleMove.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="0" GridPane.columnIndex="2" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_TimeLock.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="0" GridPane.columnIndex="3" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_Swap.png"/></image>
+            </ImageView>
+
+            <!-- 2행 -->
+            <ImageView GridPane.rowIndex="1" GridPane.columnIndex="0" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_Defense.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="1" GridPane.columnIndex="1" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_Shield.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="1" GridPane.columnIndex="2" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_SharedStone.png"/></image>
+            </ImageView>
+
+            <ImageView GridPane.rowIndex="1" GridPane.columnIndex="3" fitWidth="150" preserveRatio="true">
+                <image><Image url="/images/gamecard/la_Bomb.png"/></image>
+            </ImageView>
+
+        </GridPane>
+
+        <!-- 닫기 버튼 -->
+        <Button fx:id="closeBtn" onAction="#handleClose"
+                style="-fx-background-color: #d6ca85;
+                       -fx-background-radius:20;
+                       -fx-text-fill:white;
+                       -fx-font-size:20;
+                       -fx-font-weight:800;
+                       -fx-padding:12 55;">
+            닫기
+        </Button>
+
+    </VBox>
+
+</StackPane>
