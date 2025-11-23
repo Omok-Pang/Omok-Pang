@@ -1,8 +1,3 @@
-/** UserRepository
- * 역할: 사용자 저장소.
- * 핵심기능: 저장/조회/중복검사 / 전적·포인트 갱신.
- */
-
 package com.omokpang.repository;
 
 import com.omokpang.domain.user.User;
@@ -13,6 +8,10 @@ import java.util.ArrayList;
 import java.sql.*;
 import java.time.LocalDateTime;
 
+/** UserRepository
+ * 역할: users 테이블에 대한 CRUD 및 조회 전담 저장소.
+ * 핵심기능: 회원가입/로그인/닉네임 중복 검사/포인트 랭킹 조회 제공.
+ */
 public class UserRepository {
 
     // 닉네임 중복 여부 확인
@@ -126,7 +125,5 @@ public class UserRepository {
 
         return list;
     }
-
-
 }
 

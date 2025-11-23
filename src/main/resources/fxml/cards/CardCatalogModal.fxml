@@ -3,7 +3,6 @@
   역할: 카드 종류 안내 모달
   핵심기능: 8종 카드 메타 표시 / 닫기
 -->
-
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.control.*?>

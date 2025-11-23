@@ -7,14 +7,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-/**
- * 역할: users 테이블의 points 컬럼 조회/차감 전담.
- *  - getPoint(userId) : 현재 포인트 조회
- *  - decreasePoint(userId, amount) : amount 만큼 차감 (부족하면 실패)
+/** UserPointService
+ * 역할: users 테이블의 포인트 조회·차감을 전담하는 서비스.
+ * 핵심기능: 현재 포인트 조회(getPoint) 및 조건부 차감(decreasePoint) 처리.
  */
 public class UserPointService {
 
-    /** 현재 포인트 조회 (없으면 0) */
+    // 현재 포인트 조회 (없으면 0)
     public int getPoint(long userId) {
         String sql = "SELECT points FROM users WHERE id = ?";
 
@@ -52,7 +51,7 @@ public class UserPointService {
             ps.setInt(3, amount);
 
             int updated = ps.executeUpdate();
-            return updated > 0;  // 1행 이상 업데이트되면 성공
+            return updated > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;

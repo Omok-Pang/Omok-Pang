@@ -1,3 +1,9 @@
+/** RankingController : 전체 사용자 랭킹 화면 컨트롤러.
+ * 역할: DB에서 포인트 순 랭킹 조회 후 UI 리스트로 렌더링.
+ * MainView → Ranking 화면 전환 시 동작.
+ * UserRepository 사용.
+ */
+
 package com.omokpang.controller.splash;
 
 import com.omokpang.domain.user.User;

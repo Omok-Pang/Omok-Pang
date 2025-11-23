@@ -1,3 +1,9 @@
+/** GameIntroController : 게임 시작 전 선공/후공 안내 화면 컨트롤러.
+ * 역할: MatchSession(players, myNickname)을 읽어 선공/후공 또는 N번 플레이어 문구를 출력.
+ * 핵심기능: 5초 카운트다운 후 GameBoardView로 전환하고 GameBoardController에 NetworkClient를 바인딩.
+ * 네트워크: OmokClient로부터 들어오는 TURN·PLACE·카드 관련 메시지를 파싱해 GameBoardController로 전달.
+ */
+
 package com.omokpang.controller.game;
 
 import com.omokpang.net.OmokClient;
@@ -15,25 +21,18 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 
-/**
- * 역할: 선공/후공 안내 화면.
- *  - MatchSession 정보(players, myNickname)를 기준으로
- *    내가 선공인지 / 후공인지 문구 표시
- *  - 5초 카운트다운 후 GameBoardView로 전환 + 네트워크 바인딩
- *  - 서버에서 오는 TURN / 카드 메시지 → GameBoardController 로 전달
- */
 public class GameIntroController {
 
     @FXML private Label firstPlayerLabel;   // "당신이 선공입니다!" / "당신이 후공입니다!"
     @FXML private Label countdownLabel;     // "5초 뒤에 시작합니다."
 
-    /** 내가 선공인지 여부 */
+    // 내가 선공인지 여부
     private boolean iAmFirst;
 
     private Timeline countdownTimeline;
     private int remainSeconds = 5;
 
-    /** GameBoardController 인스턴스 (openGameBoard에서 로드 후 저장) */
+    // GameBoardController 인스턴스 (openGameBoard에서 로드 후 저장)
     private GameBoardController boardController;
 
     @FXML
@@ -45,11 +44,11 @@ public class GameIntroController {
         iAmFirst = false;
 
         if (players != null && players.length > 0 && me != null) {
-            // 약속: players[0] → 선공 유저
+            // players[0] → 선공 유저
             iAmFirst = players[0].equals(me);
 
             if (players.length == 2) {
-                // 1:1 모드: 기존처럼 선/후공 문구
+                // 1:1 모드: 선/후공 문구
                 firstPlayerLabel.setText(
                         iAmFirst ? "당신이 선공입니다!" : "당신이 후공입니다!"
                 );
@@ -77,8 +76,7 @@ public class GameIntroController {
         startCountdown();
     }
 
-
-    /** 1초마다 감소하는 카운트다운 타이머 */
+    // 1초마다 감소하는 카운트다운 타이머
     private void startCountdown() {
         updateCountdownLabel();
 
@@ -103,8 +101,7 @@ public class GameIntroController {
         countdownLabel.setText(remainSeconds + "초 뒤에 시작합니다.");
     }
 
-
-    /* GameBoardView.fxml 로 전환 + NetworkClient 바인딩 + 서버 메시지 처리 등록 */
+    // GameBoardView.fxml 로 전환 + NetworkClient 바인딩 + 서버 메시지 처리 등록
     private void openGameBoard() {
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -114,7 +111,7 @@ public class GameIntroController {
             Parent root = loader.load();
             boardController = loader.getController();
 
-            // 🔥 1:1 / 4인 모드 구분
+            // 1:1 / 4인 모드 구분
             String[] players = MatchSession.getPlayers();
             boolean isFourPlayers = (players != null && players.length == 4);
 
@@ -205,7 +202,7 @@ public class GameIntroController {
         }
     }
 
-    /** 서버 메시지를 GameBoardController 로 전달하는 핵심 처리 */
+    // 서버 메시지를 GameBoardController 로 전달하는 핵심 처리
     private void handleServerMessage(String line) {
 
         if (boardController == null) return;
@@ -236,7 +233,7 @@ public class GameIntroController {
             return;
         }
 
-        // 🔄 서버 턴 전달
+        // 서버 턴 전달
         if (line.startsWith("TURN ")) {
             boardController.onTurnFromServer(
                     line.substring("TURN ".length()).trim()
@@ -267,7 +264,7 @@ public class GameIntroController {
             return;
         }
 
-        // Bomb!! 카드
+        // Bomb! 카드
         if (line.equals("BOMB_START")) {
             boardController.onBombStartFromOpponent();
             return;

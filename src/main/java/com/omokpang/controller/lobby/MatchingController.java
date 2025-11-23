@@ -1,3 +1,9 @@
+/** MatchingController : 매칭 대기 화면 컨트롤러.
+ * 역할: 서버에 QUEUE 요청 전송 / 상대 매칭 결과(MATCH) 수신 / MatchSession 저장.
+ * 핵심기능: 매칭 취소 / 1v1‧4FFA‧2v2 공통 로직 처리.
+ * 네트워크: OmokClient 메시지 핸들러 등록 및 처리.
+ */
+
 package com.omokpang.controller.lobby;
 
 import com.omokpang.SceneRouter;
@@ -10,12 +16,6 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
-/**
- * 역할: 매칭 대기 화면.
- *  - 서버에 "QUEUE 1v1 닉네임" 전송
- *  - 서버에서 "MATCH 1v1 A,B" 수신 시 MatchSession에 저장 후
- *    MatchSuccess 화면으로 이동.
- */
 public class MatchingController {
 
     @FXML
@@ -27,24 +27,17 @@ public class MatchingController {
     @FXML
     private Button cancelBtn;
 
-    /** 네트워크 클라이언트 (싱글톤) */
+    // 네트워크 클라이언트 (싱글톤)
     private final OmokClient client = OmokClient.getInstance();
 
     @FXML
     public void initialize() {
 
-        // ============================
-        //   내 아바타 기본 이미지 로딩
-        //   (나중에 실제 유저 아바타로 바꿔도 됨)
-        // ============================
         Image avatar = new Image(
                 getClass().getResource("/images/user/user3.png").toExternalForm()
         );
         myAvatar.setImage(avatar);
 
-        // ============================
-        //   취소 버튼 이미지 적용
-        // ============================
         Image normal = new Image(
                 getClass().getResource("/images/button/match_btn.png").toExternalForm()
         );
@@ -56,10 +49,6 @@ public class MatchingController {
         cancelButtonImage.setOnMouseEntered(e -> cancelButtonImage.setImage(hover));
         cancelButtonImage.setOnMouseExited(e -> cancelButtonImage.setImage(normal));
 
-        // ============================
-        //   서버 매칭 요청 등록
-        // ============================
-
         // 1) 서버에서 오는 메시지를 이 화면이 받도록 핸들러 등록
         client.setMessageHandler(this::handleServerMessage);
 
@@ -70,7 +59,7 @@ public class MatchingController {
             nickname = user.getNickname();
         }
 
-        // 🔥 여기서 MatchSession에 내 닉네임 저장!
+        // 여기서 MatchSession에 내 닉네임 저장
         MatchSession.setMyNickname(nickname);
 
         // 3) 내가 원하는 모드 가져오기 (없으면 기본 1v1)
@@ -106,7 +95,6 @@ public class MatchingController {
                 MatchSession.setPlayers(players);
             }
 
-            // 모드는 일단 상관없이 같은 매칭 성공 화면 재사용해도 됨
             SceneRouter.go("/fxml/lobby/MatchSuccessView.fxml");
         }
     }

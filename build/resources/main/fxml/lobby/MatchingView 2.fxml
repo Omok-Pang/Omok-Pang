@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.omokpang.controller.lobby.MatchingController"
+            prefWidth="750" prefHeight="600">
+
+    <!-- ⭐ 1) 피그마처럼 꽉 차는 우주 배경 -->
+    <ImageView fitWidth="750    " fitHeight="600" preserveRatio="false"
+               AnchorPane.leftAnchor="0" AnchorPane.topAnchor="0"
+               AnchorPane.rightAnchor="0" AnchorPane.bottomAnchor="0">
+        <image>
+            <Image url="@/images/bg_lightmode.png" />
+        </image>
+    </ImageView>
+
+    <!-- ⭐ 2) 중앙 세로 레이아웃 (피그마처럼 완전 정중앙 배치) -->
+    <VBox alignment="CENTER"
+          spacing="25"
+          prefWidth="750" prefHeight="600"
+          AnchorPane.topAnchor="0" AnchorPane.bottomAnchor="0"
+          AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0">
+
+        <!-- 제목 -->
+        <Label text="유저 기다리는 중......"
+               style="-fx-font-size: 44px; -fx-text-fill: white; -fx-font-weight: bold;"/>
+
+        <!-- ⭐ 행성 중앙 (피그마처럼 약간 커짐) -->
+        <ImageView fx:id="myAvatar"
+                   fitWidth="200" fitHeight="200">
+            <image>
+                <Image url="@/images/user/user3.png" />
+            </image>
+        </ImageView>
+
+
+        <!-- 액션 버튼 -->
+        <Button fx:id="cancelBtn"
+                onAction="#onCancel"
+                style="-fx-background-color: transparent; -fx-cursor: hand;">
+            <graphic>
+                <ImageView fx:id="cancelButtonImage" fitWidth="150" fitHeight="90"/>
+            </graphic>
+        </Button>
+
+    </VBox>
+
+</AnchorPane>

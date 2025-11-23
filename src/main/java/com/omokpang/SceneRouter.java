@@ -6,10 +6,12 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
- * 역할: 전역 화면 전환 유틸리티(싱글톤).
+ * SceneRouter
+ * 역할: 전역 화면 전환을 담당하는 유틸리티(싱글톤).
  * 핵심기능:
- *  - FXML 경로만으로 Scene 전환
- *  - 크기/타이틀 기본값 유지
+ *  - FXML 경로만 전달하면 바로 화면 전환
+ *  - App.APP_WIDTH/HEIGHT 기반으로 크기 고정
+ *  - Stage를 공유해 전체 앱 내 Scene 일원화
  */
 public final class SceneRouter {
     private static Stage stage;
@@ -25,7 +27,7 @@ public final class SceneRouter {
         try {
             FXMLLoader loader = new FXMLLoader(SceneRouter.class.getResource(fxmlPath));
             Parent root = loader.load();
-            Scene scene = new Scene(root, App.APP_WIDTH, App.APP_HEIGHT); // ← 크기 강제
+            Scene scene = new Scene(root, App.APP_WIDTH, App.APP_HEIGHT);
 
             stage.setScene(scene);
             stage.setWidth(App.APP_WIDTH);

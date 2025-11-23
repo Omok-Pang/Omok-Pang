@@ -1,11 +1,11 @@
-/** ResultService
- * 역할: 게임 종료 정산/기록.
- *  - players 배열을 받아서 DB에 wins / losses / points 반영
- */
 package com.omokpang.service;
 
 import com.omokpang.repository.ResultRepository;
 
+/** ResultService
+ * 역할: 게임 종료 시 players 결과 배열을 해석해 DB에 정산을 반영하는 서비스.
+ * 핵심기능: 순위·포인트 정보를 기반으로 ResultRepository.updateUserResult 호출.
+ */
 public class ResultService {
 
     private static final ResultService INSTANCE = new ResultService();
@@ -15,9 +15,6 @@ public class ResultService {
 
     private ResultService() {}
 
-    /**
-     * @param players [ [순위, 닉네임, 이번 판 포인트(80/40), 아바타경로], ... ]
-     */
     public void applyGameResult(String[][] players) {
         if (players == null) return;
 

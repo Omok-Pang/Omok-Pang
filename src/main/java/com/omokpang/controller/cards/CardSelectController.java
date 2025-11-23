@@ -1,8 +1,15 @@
+/** CardSelectController : 카드 뽑기 화면 컨트롤러.
+ * 역할: 카드 2장 뽑기, 포인트(40pt) 리롤, 20초 타이머, 자동 선택 확정.
+ * 선택된 카드는 MatchSession에 저장되며 GameIntro로 이동.
+ * CardService, UserPointService와 연동됨.
+ */
+
 package com.omokpang.controller.cards;
 
 import com.omokpang.domain.card.Card;
 import com.omokpang.service.CardService;
 import com.omokpang.service.UserPointService;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
@@ -14,6 +21,7 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -44,7 +52,7 @@ public class CardSelectController {
     private Timeline timer;
     private int remain = 20;
 
-    // 현재 로그인 유저 id (이전 화면에서 세팅해줄 값)
+    // 현재 로그인 유저 id
     private long userId;
 
     // 현재 화면에서 사용하는 포인트(= DB의 users.points)
@@ -71,18 +79,14 @@ public class CardSelectController {
         startTimer();
     }
 
-    /**
-     * 로그인 유저 정보 세팅용
-     * - 이전 화면에서 FXMLLoader로 이 컨트롤러를 가져와서 호출해주면 됨.
-     *   예) controller.setUserId(loggedInUserId);
-     */
+    // 로그인 유저 정보 세팅용 : 이전 화면에서 FXMLLoader로 이 컨트롤러를 가져와서 호출해주면 됨.
     public void setUserId(long userId) {
         this.userId = userId;
         this.point = userPointService.getPoint(userId);
         pointLabel.setText(String.valueOf(point));
     }
 
-    /** 카드 받기 */
+    // 카드 받기
     @FXML
     private void handleReceive() {
         cards = cardService.drawTwo();  // 카드 두 장 뽑기
@@ -99,7 +103,7 @@ public class CardSelectController {
         receiveBtn.setDisable(true);
     }
 
-    /** 카드 이미지 반영 */
+    // 카드 이미지 반영
     private void updateCardImages() {
         setImage(cardImage1, cards.get(0).getImagePath());
         setImage(cardImage2, cards.get(1).getImagePath());
@@ -117,13 +121,14 @@ public class CardSelectController {
      */
     private boolean usePoint(int amount) {
         if (point < amount) {
-            // 필요하다면 Alert 로 "포인트 부족" 안내 가능
+            Alert alert = new Alert(Alert.AlertType.WARNING, "포인트가 부족합니다!");
+            alert.showAndWait();
+
             return false;
         }
 
         boolean success = userPointService.decreasePoint(userId, amount);
         if (!success) {
-            // 동시접속 등으로 DB 업데이트 실패한 경우 방어
             return false;
         }
 
@@ -132,7 +137,6 @@ public class CardSelectController {
         return true;
     }
 
-    /** 40pt 리롤 1 */
     @FXML
     private void handleReroll1() {
         if (!usePoint(40)) return;
@@ -141,7 +145,6 @@ public class CardSelectController {
         updateCardImages();
     }
 
-    /** 40pt 리롤 2 */
     @FXML
     private void handleReroll2() {
         if (!usePoint(40)) return;
@@ -150,7 +153,7 @@ public class CardSelectController {
         updateCardImages();
     }
 
-    /** 20초 카운트다운 */
+    // 20초 카운트다운
     private void startTimer() {
         remain = 20;
         timerLabel.setText("20초");
@@ -160,7 +163,7 @@ public class CardSelectController {
             timerLabel.setText(remain + "초");
 
             if (remain <= 0) {
-                onTimeOver();   // ⬅ 여기서만 다음 화면으로 이동
+                onTimeOver();
             }
         }));
 
@@ -168,15 +171,15 @@ public class CardSelectController {
         timer.play();
     }
 
-    /** 선택 완료 버튼 클릭시: 선택만 확정하고, 화면은 20초까지 유지 */
+    // 선택 완료 버튼 클릭시: 선택만 확정하고, 화면은 20초까지 유지
     @FXML
     private void handleComplete() {
         finishSelection();
     }
 
-    /** 현재 선택을 확정만 하는 로직 (화면 이동 없음) */
+    // 현재 선택을 확정만 하는 로직 (화면 이동 없음)
     private void finishSelection() {
-        if (selectionFixed) return; // 이미 확정한 경우 무시
+        if (selectionFixed) return;
 
         if (cards == null || cards.size() < 2) {
             cards = cardService.drawTwo();
@@ -186,13 +189,12 @@ public class CardSelectController {
         com.omokpang.session.MatchSession.setMySelectedCards(cards);
         selectionFixed = true;
 
-        // 더 이상 리롤/완료 못 하게 막기
         rerollBtn1.setDisable(true);
         rerollBtn2.setDisable(true);
         completeBtn.setDisable(true);
     }
 
-    /** 20초가 되었을 때 호출: 자동 확정 + GameIntro로 이동 */
+    // 20초가 되었을 때 호출: 자동 확정 + GameIntro로 이동
     private void onTimeOver() {
         if (timer != null) timer.stop();
 
@@ -233,5 +235,4 @@ public class CardSelectController {
             e.printStackTrace();
         }
     }
-
 }

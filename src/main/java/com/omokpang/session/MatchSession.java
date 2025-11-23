@@ -3,11 +3,15 @@ package com.omokpang.session;
 import com.omokpang.domain.card.Card;
 
 import java.util.List;
+
 /**
- * 역할: 매칭 결과(게임 모드, 참가자 닉네임 목록, 내 닉네임, 아바타, 선택 카드)를
- *       화면 간에 공유하기 위한 간단한 전역 저장소.
- *       - Matching → MatchSuccess → CardSelect → GameIntro → GameBoard
- *         흐름 전체에서 공통으로 사용된다.
+ * MatchSession
+ * 역할: 매칭~게임 시작까지 모든 화면에서 공유되는 전역 매칭 세션.
+ * 핵심기능:
+ *  - 게임 모드(1v1/2v2/FFA) 보관
+ *  - 매칭된 플레이어 목록/팀 정보/아바타 정보 저장
+ *  - 내 닉네임, 선택한 카드 2장 저장
+ *  - 로비 복귀 시 clear()로 세션 전체 초기화
  */
 public class MatchSession {
 

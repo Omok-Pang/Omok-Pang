@@ -1,6 +1,6 @@
-/** CardCatalogController
- * 역할: 카드 종류 안내 모달.
- * 핵심기능: 8종 카드 메타 표시 / 닫기.
+/** CardCatalogController : 카드 종류 안내 모달.
+ * 역할: 8종 카드 설명을 표시하고 모달을 닫는 기능만 담당.
+ * CardSelectController에서 "카드 종류" 버튼으로 호출됨.
  */
 
 package com.omokpang.controller.cards;

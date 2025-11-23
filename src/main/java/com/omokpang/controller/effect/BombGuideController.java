@@ -38,7 +38,7 @@ public class BombGuideController {
         closeOverlay();
     }
 
-    /** 🔥 GameBoardController에서 외부에서 닫을 때 호출하는 public close() */
+    /** GameBoardController에서 외부에서 닫을 때 호출하는 public close() */
     public void close() {
         closeOverlay();
     }

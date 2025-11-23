@@ -1,7 +1,9 @@
-/** MainController
- * 역할: 홈(개인전/팀전, 2·4인 선택, 규칙보기).
- * 핵심기능: 모드/인원 선택 상태 유지 / 규칙 모달 / 게임 시작→매칭 화면 이동.
+/** MainController : 홈 메뉴 화면 컨트롤러.
+ * 역할: 개인전/팀전 모드 선택, 2인/4인 인원 선택, 규칙/랭크/게임시작 제어.
+ * 핵심기능: 선택 상태 유지 / MatchSession에 모드 저장 후 매칭 화면 이동.
+ * 상단에는 로그인 유저 정보(닉네임‧포인트‧승수) 표시.
  */
+
 package com.omokpang.controller.main;
 
 import com.omokpang.SceneRouter;
@@ -134,12 +136,12 @@ public class MainController {
 
         String mode;
         if (isTeamMode) {
-            // ✅ 팀전: 2:2(4인) 고정
+            // 팀전: 2:2(4인) 고정
             mode = "2v2";
             playerCount = 4;
 
         } else {
-            // ✅ 개인전 모드
+            // 개인전 모드
             if (playerCount == 0) {
                 System.out.println("[WARN] 개인전 인원을 선택하지 않았습니다.");
                 return;
@@ -161,7 +163,7 @@ public class MainController {
         SceneRouter.go("/fxml/lobby/MatchingView.fxml");
     }
 
-    /*랭크보기*/
+    /* 랭크보기 */
     @FXML
     private void handleShowRanking() {
         SceneRouter.go("/fxml/splash/RankingView.fxml");
@@ -177,6 +179,4 @@ public class MainController {
         }
         return new Image(url.toExternalForm());
     }
-
-    // setUserInfo / setStats 는 이제 안 써도 되지만, 다른 곳에서 호출 중이면 그대로 둬도 괜찮음
 }

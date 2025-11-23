@@ -1,3 +1,8 @@
+/** ResultController : 게임 종료 후 결과·순위 표시 컨트롤러.
+ * 역할: 승패 배너·점수·랭킹 UI 출력 / DB 업데이트(1등 클라이언트만 수행).
+ * 핵심기능: 플레이어 리스트 표시 / AppSession 유저 정보 갱신 / 다시하기·메인 이동 처리.
+ */
+
 package com.omokpang.controller.result;
 
 import com.omokpang.SceneRouter;
