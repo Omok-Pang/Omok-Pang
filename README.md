@@ -37,4 +37,36 @@
 ### [맡은 작업]
 김예은 : 기능정리 , UI 및 기능 구현<br>
 오채연 : UI 디자인 , UI 및 기능 구현, 소켓 연결, 데이터 베이스 담당<br>
-백승은 : 기초세팅 , UI 및 기능 구현<br>
+조윤경 : 기초세팅 , UI 및 기능 구현<br>
+
+
+-------------------------------------------------------------------------------------
+# 2.  기술 및 개발 환경 🛠️
+#### [기술 스택]
+![Java](https://img.shields.io/badge/java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
+![JavaFX](https://img.shields.io/badge/javafx-%23FF0000.svg?style=for-the-badge&logo=javafx&logoColor=white)
+![TCP Socket](https://img.shields.io/badge/TCP%20Socket-%2300599C.svg?style=for-the-badge&logo=socketdotio&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+
+#### [개발 도구]
+![IntelliJ IDEA](https://img.shields.io/badge/IntelliJ%20IDEA-%23000000.svg?style=for-the-badge&logo=intellijidea&logoColor=white)
+![Figma](https://img.shields.io/badge/figma-%23F24E1E.svg?style=for-the-badge&logo=figma&logoColor=white)
+![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
+
+### [협력 도구]
+![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)
+![Notion](https://img.shields.io/badge/Notion-%23000000.svg?style=for-the-badge&logo=notion&logoColor=white)
+![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)
+
+-------------------------------------------------------------------------------------
+# 3. 시스템 아키텍처 및 데이터 흐름 요약
+
+
+
+
+-------------------------------------------------------------------------------------
+# 4. 실제 동작화면
+### 첫 화면 -> 규칙화면
+
+
+
