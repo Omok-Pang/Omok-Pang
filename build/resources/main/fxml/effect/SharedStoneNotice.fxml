@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<StackPane fx:id="rootOverlay"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.omokpang.controller.effect.SharedStoneNoticeController"
+           style="-fx-background-color: transparent;"
+           pickOnBounds="false">
+
+    <BorderPane prefWidth="Infinity" prefHeight="Infinity">
+
+        <bottom>
+            <StackPane prefHeight="140"
+                       style="-fx-background-color: rgba(0,0,0,0.80);">
+                <Label fx:id="noticeLabel"
+                       wrapText="true"
+                       textAlignment="CENTER"
+                       style="-fx-text-fill: white;
+                              -fx-font-size: 20px;
+                              -fx-font-weight: bold;
+                              -fx-alignment: center;" />
+            </StackPane>
+        </bottom>
+
+    </BorderPane>
+</StackPane>

@@ -1944,6 +1944,12 @@ public class GameBoardController {
 
         System.out.println("[GameBoard] 상대 Swap 사용됨");
 
+        // 같은 팀(우리 팀)의 공격이면 방어카드 발동 X
+        if (!isAttackFromEnemyTeam()) {
+            System.out.println("[GameBoard] 같은 팀의 Swap - Shield/Defense 미발동");
+            return;
+        }
+
         // 1순위: Defense로 자동 방어
         if (defenseReady) {
             handleDefenseAutoBlock("SWAP");
@@ -2058,6 +2064,38 @@ public class GameBoardController {
     public void onTimeLockStartFromOpponent() {
         System.out.println("[GameBoard] 상대가 Time Lock 카드를 사용했습니다.");
 
+        // --- 1) 누가 이 카드를 썼는지 추론 ---
+        // TIMELOCK_START 메시지는 "카드 사용자의 턴"에 브로드캐스트 되기 때문에
+        // 현재 currentTurnNickname 이 곧 카드 사용자의 닉네임이다.
+        String attackerNickname = currentTurnNickname;
+
+        int attackerIdx = -1;
+        if (players != null && attackerNickname != null) {
+            for (int i = 0; i < players.length; i++) {
+                if (attackerNickname.equals(players[i])) {
+                    attackerIdx = i;
+                    break;
+                }
+            }
+        }
+
+        // --- 2) 팀 모드(2vs2 등)에서는 같은 팀이면 Time Lock 효과 무시 ---
+        if (attackerIdx != -1 &&
+                playerTeam != null &&
+                players != null &&
+                playerTeam.length == players.length) {
+
+            int myTeam = playerTeam[myIndex];
+            int attackerTeam = playerTeam[attackerIdx];
+
+            if (myTeam == attackerTeam) {
+                // ✅ 같은 팀이 쓴 Time Lock → 나에게는 아무 효과 없음
+                System.out.println("[GameBoard] 같은 팀의 Time Lock - 효과/메시지 모두 무시");
+                return; // timeLockNextTurn 설정도 안 하고, 팝업도 안 띄움
+            }
+        }
+
+        // --- 3) 여기까지 왔으면 '적 팀'이거나 팀 정보 없음 → 기존대로 3초 적용 ---
         // 내 "다음 턴"의 제한시간을 3초로 줄이는 플래그
         timeLockNextTurn = true;
 
@@ -2203,6 +2241,12 @@ public class GameBoardController {
 
         System.out.println("[GameBoard] 상대 Remove 사용됨");
 
+        // 같은 팀(우리 팀)의 공격이면 방어카드 발동 X
+        if (!isAttackFromEnemyTeam()) {
+            System.out.println("[GameBoard] 같은 팀의 Remove - Shield/Defense 미발동");
+            return;
+        }
+
         // 1순위: Defense 자동 방어
         if (defenseReady) {
             handleDefenseAutoBlock("REMOVE");
@@ -2299,6 +2343,12 @@ public class GameBoardController {
 
     private void handleShieldDefenseFromAttack(String attackType) {
         if (!hasShieldCard) return;
+
+        // 팀 모드에서 같은 팀의 공격이면 Shield 발동 안 함
+        if (!isAttackFromEnemyTeam()) {
+            System.out.println("[GameBoard] 같은 팀의 공격에는 Shield 발동 안 함");
+            return;
+        }
 
         System.out.println("[GameBoard] Shield 카드 자동 발동! attackType = " + attackType);
 
@@ -2398,6 +2448,12 @@ public class GameBoardController {
     private void handleDefenseAutoBlock(String attackType) {
         if (!defenseReady) return;
 
+        // 팀 모드에서 같은 팀의 공격이면 Defense 발동 안 함
+        if (!isAttackFromEnemyTeam()) {
+            System.out.println("[GameBoard] 같은 팀의 공격에는 Defense 발동 안 함");
+            return;
+        }
+
         System.out.println("[GameBoard] Defense 자동 발동! attackType = " + attackType);
 
         // 이번 Defense 버프는 한 번만 유효
@@ -2441,5 +2497,33 @@ public class GameBoardController {
 
     private boolean isInside(int r, int c) {
         return r >= 0 && r < N && c >= 0 && c < N;
+    }
+
+    // 공격이 "적 팀"에서 온 것인지 확인하는 헬퍼
+    private boolean isAttackFromEnemyTeam() {
+        // 팀 정보가 없으면 그냥 적 공격으로 취급 (기존 동작 유지)
+        if (players == null || playerTeam == null || currentTurnNickname == null) {
+            return true;
+        }
+        if (playerTeam.length != players.length) {
+            return true;
+        }
+
+        int attackerIdx = -1;
+        for (int i = 0; i < players.length; i++) {
+            if (currentTurnNickname.equals(players[i])) {
+                attackerIdx = i;
+                break;
+            }
+        }
+        if (attackerIdx == -1) {
+            return true;
+        }
+
+        int myTeam = playerTeam[myIndex];
+        int attackerTeam = playerTeam[attackerIdx];
+
+        // 팀이 다르면 "적 팀" 공격
+        return myTeam != attackerTeam;
     }
 }
