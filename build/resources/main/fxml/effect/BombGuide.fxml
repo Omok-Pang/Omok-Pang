@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<StackPane fx:id="rootOverlay"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="com.omokpang.controller.effect.BombGuideController"
+           alignment="BOTTOM_CENTER"
+           style="-fx-background-color: transparent;">
+
+    <!-- 아래쪽 안내 바 -->
+    <VBox StackPane.alignment="BOTTOM_CENTER"
+          alignment="CENTER"
+          spacing="8"
+          prefHeight="140"
+          minHeight="140"
+          maxHeight="140"
+          style="-fx-background-color: rgba(0,0,0,0.7);
+                 -fx-background-radius: 24;
+                 -fx-padding: 20 40 20 40;">
+        <Label fx:id="guideLabel"
+               text="Bomb!! 카드를 선택했습니다.&#10;돌 한개를 선택하면 그 주변 3x3에 위치한 돌도 제거됩니다."
+               wrapText="true"
+               style="-fx-text-fill: white;
+                      -fx-font-size: 18px;
+                      -fx-font-weight: bold;
+                      -fx-alignment: center;" />
+    </VBox>
+</StackPane>
