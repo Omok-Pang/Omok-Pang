@@ -15,34 +15,6 @@
 
 -----
 
-## 🌟 시스템 구조 및 사용한 라이브러리
-<img width="1920" height="1080" alt="5" src="https://github.com/user-attachments/assets/57282e32-9137-4b53-9944-04dde5159c4c" />
-
-## 📁 프로젝트 구조
-<img width="1920" height="1080" alt="6" src="https://github.com/user-attachments/assets/fdc70f48-1232-4cfa-8c70-b6938e91b787" />
-
--------
-## 🃏 특수 카드 소개
-
-
--------
-## 🎮 오목팡 화면
-<img width="1920" height="1080" alt="7" src="https://github.com/user-attachments/assets/4f322da9-6c6c-4755-8ed1-9ff1cb0fa41a" />
-<img width="1920" height="1080" alt="8" src="https://github.com/user-attachments/assets/2c415df8-aee5-45a8-9668-aa8c356d7323" />
-<img width="1920" height="1080" alt="9" src="https://github.com/user-attachments/assets/40b95fa8-2ef2-40dd-9f1c-550bf3585c8c" />
-<img width="1920" height="1080" alt="10" src="https://github.com/user-attachments/assets/ab96f840-c21b-43de-99c3-beee7691bbc1" />
-<img width="1920" height="1080" alt="11" src="https://github.com/user-attachments/assets/a76cfc5b-be63-42b9-90d7-797576d642a5" />
-<img width="1920" height="1080" alt="12" src="https://github.com/user-attachments/assets/730e8838-1171-4a80-99ca-483e72508f37" />
-<img width="1920" height="1080" alt="13" src="https://github.com/user-attachments/assets/4324a18b-24ee-4a6d-91a0-81eb187b1dc3" />
-<img width="1920" height="1080" alt="14" src="https://github.com/user-attachments/assets/f009a7ca-f44b-45b8-a772-49fad69c7084" />
-<img width="1920" height="1080" alt="15" src="https://github.com/user-attachments/assets/1064164b-91aa-4eb7-9971-84a8c425ca4e" />
-<img width="1920" height="1080" alt="16" src="https://github.com/user-attachments/assets/1670037f-72a4-4182-827d-af3a7da9d9de" />
-
-
-
-
-
-
 
 
 
